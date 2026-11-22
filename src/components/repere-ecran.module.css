@@ -13,7 +13,7 @@
 
 /*
  * LE MÉDAILLON PORTE LA COULEUR DE LA FAMILLE, icône blanche dessus : les
- * cinq couleurs de famille tiennent 4,5:1 avec le blanc, mesurées dans
+ * sept couleurs de rubrique tiennent 4,5:1 avec le blanc, mesurées dans
  * `layout.module.css`. Décor, mais lisible.
  */
 .medaillon {
@@ -27,18 +27,6 @@
   color: var(--ls-text-on-primary);
 }
 
-.textes {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.2;
-}
-
-.famille {
-  color: var(--ls-text-muted);
-  font-size: 0.75rem;
-}
-
 /*
  * LE NOM SE REPLIE SUR DEUX LIGNES plutôt que de se tronquer : « Stocks et
  * marchés » se lisait « Stocks et ma… » à 768 px sous une police large,
@@ -46,16 +34,10 @@
  */
 .rubrique {
   color: var(--ls-text);
-  font-size: 0.9375rem;
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-
-/* Sous 560 px, le nom de la rubrique suffit : la famille cède sa ligne. */
-@media (max-width: 559px) {
-  .famille {
-    display: none;
-  }
 }
 
 /*

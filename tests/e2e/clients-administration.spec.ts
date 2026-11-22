@@ -201,7 +201,11 @@ test.describe("connectee en administration", () => {
 
     await page
       .getByRole("navigation", { name: "Sections de l'administration" })
-      .getByRole("link", { name: "Clients" })
+      .getByRole("link", { name: /^Clients et avis/ })
+      .click();
+    await page
+      .getByRole("navigation", { name: "Clients et avis", exact: true })
+      .getByRole("link", { name: "Comptes clients" })
       .click();
 
     /*

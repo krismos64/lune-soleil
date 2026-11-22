@@ -38,6 +38,7 @@ import { headers } from "next/headers";
 import { NavigationAdministration } from "@/components/navigation-administration";
 import { IconeAdministration } from "@/components/icones-administration";
 import { PaletteAdministration } from "@/components/palette-administration";
+import { OngletsRubrique } from "@/components/onglets-rubrique";
 import { RepereEcran } from "@/components/repere-ecran";
 import { lireIdentite } from "@/services/autorisation";
 import { lireComptages, lireNomAffiche } from "@/services/tableau-bord";
@@ -141,8 +142,8 @@ export default async function LayoutAdministration({
          */}
         <div className={styles.bandeau}>
           {/*
-           * LE REPÈRE D'ÉCRAN, LS-326 : la famille, la rubrique et son icône.
-           * Il donne aussi sa couleur à l'écran, par `data-famille`.
+           * LE REPÈRE D'ÉCRAN, LS-326 : la rubrique et son icône, dans sa
+           * couleur, qu'il donne aussi à l'écran par `data-famille`.
            */}
           <RepereEcran />
 
@@ -165,6 +166,12 @@ export default async function LayoutAdministration({
             </Link>
           </div>
         </div>
+
+        {/*
+         * LES ONGLETS DE LA RUBRIQUE, refonte du 22 novembre 2026 : les écrans
+         * voisins d'un clic, sans repasser par la barre.
+         */}
+        <OngletsRubrique comptages={comptages} />
 
         {children}
       </div>

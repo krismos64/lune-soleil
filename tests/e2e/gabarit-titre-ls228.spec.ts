@@ -145,16 +145,16 @@ test.describe("Blocs d'état, administration", () => {
     await expect(panneau).toBeVisible();
 
     for (const libelle of [
-      "Pièces physiques",
-      "Réservées par un paiement en cours",
-      "Disponibles, hors réservations",
+      "Pièces en stock",
+      "En cours de paiement",
+      "Disponibles à la vente",
     ]) {
       const valeur = panneau.locator(`dt:text-is("${libelle}") + dd`);
       await expect(valeur).toHaveText(/^\d+$/);
     }
 
     const lien = panneau.getByRole("link", {
-      name: "Voir les stocks et marchés",
+      name: "Voir le stock et les marchés",
     });
     expect((await lien.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     expect(await debordementHorizontal(page)).toBeLessThanOrEqual(

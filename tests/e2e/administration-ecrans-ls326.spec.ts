@@ -16,22 +16,22 @@ import {
 } from "./mesure-rendu";
 
 const ECRANS = [
-  ["/administration", "ensemble", "Tableau de bord"],
-  ["/administration/alertes", "ensemble", "Alertes"],
-  ["/administration/statistiques", "ensemble", "Statistiques"],
-  ["/administration/commandes", "ventes", "Commandes"],
-  ["/administration/expeditions", "ventes", "Expéditions"],
-  ["/administration/retractations", "ventes", "Rétractations"],
-  ["/administration/factures", "ventes", "Factures et avoirs"],
-  ["/administration/messages", "clients", "Messages"],
-  ["/administration/avis", "clients", "Avis"],
-  ["/administration/clients", "clients", "Clients"],
-  ["/administration/produits", "catalogue", "Produits"],
-  ["/administration/categories", "catalogue", "Catégories"],
-  ["/administration/stocks", "catalogue", "Stocks et marchés"],
-  ["/administration/parametres", "reglages", "Paramètres"],
-  ["/administration/passkeys", "reglages", "Vos passkeys"],
-  ["/administration/journal-connexions", "reglages", "Connexions"],
+  ["/administration", "accueil", "Accueil"],
+  ["/administration/alertes", "accueil", "Accueil"],
+  ["/administration/statistiques", "statistiques", "Statistiques"],
+  ["/administration/commandes", "commandes", "Commandes"],
+  ["/administration/expeditions", "commandes", "Commandes"],
+  ["/administration/retractations", "retours", "Retours et factures"],
+  ["/administration/factures", "retours", "Retours et factures"],
+  ["/administration/messages", "clients", "Clients et avis"],
+  ["/administration/avis", "clients", "Clients et avis"],
+  ["/administration/clients", "clients", "Clients et avis"],
+  ["/administration/produits", "catalogue", "Catalogue"],
+  ["/administration/categories", "catalogue", "Catalogue"],
+  ["/administration/stocks", "catalogue", "Catalogue"],
+  ["/administration/parametres", "reglages", "Réglages"],
+  ["/administration/passkeys", "reglages", "Réglages"],
+  ["/administration/journal-connexions", "reglages", "Réglages"],
 ] as const;
 
 /** La couleur du trait sous le titre : celle de la famille de l'écran. */
@@ -65,14 +65,14 @@ test.describe("administratrice", () => {
         TOLERANCE_DEBORDEMENT_PX,
       );
     }
-    // Une couleur par famille, la même sur tous ses écrans, cinq en tout.
+    // Une couleur par famille, la même sur tous ses écrans, sept en tout.
     for (const [famille, vues] of couleurs) {
       expect([...vues], famille).toHaveLength(1);
     }
     const distinctes = new Set(
       [...couleurs.values()].map((vues) => [...vues][0]),
     );
-    expect(distinctes.size).toBe(5);
+    expect(distinctes.size).toBe(7);
     expect(distinctes.has("rgba(0, 0, 0, 0)")).toBe(false);
   });
 
@@ -141,10 +141,10 @@ test.describe("administratrice", () => {
     await page.goto("/administration/produits/nouveau");
     const repere = page.locator("p[data-famille]");
     await expect(repere).toHaveAttribute("data-famille", "catalogue");
-    await expect(repere).toContainText("Produits");
+    await expect(repere).toContainText("Catalogue");
   });
 
-  test("Paramètres : le sommaire dit l'état de chaque réglage et y mène sous le bandeau", async ({
+  test("Paramètres : le sommaire dit l'état de chaque réglage et ouvre sa section", async ({
     page,
   }) => {
     await page.goto("/administration/parametres");
@@ -152,25 +152,36 @@ test.describe("administratrice", () => {
       name: "Réglages de la boutique",
     });
     const liens = sommaire.getByRole("link");
-    await expect(liens).toHaveCount(4);
-    for (const [nom, ancre] of [
-      ["Livraison et alertes", "#tarifs"],
-      ["Thème saisonnier", "#theme-saisonnier"],
-      ["Promotion", "#promotion"],
-      ["Période annoncée", "#periode-promotion"],
+    /*
+     * TROIS SECTIONS DEPUIS LA REFONTE DU 22 NOVEMBRE 2026, chacune ouverte
+     * par son entrée ; la promotion et sa période vivent avec l'ambiance.
+     */
+    await expect(liens).toHaveCount(3);
+    for (const [nom, cible] of [
+      ["Livraison", "/administration/parametres"],
+      ["Ambiance et promotion", "/administration/parametres?section=ambiance"],
+      ["Notifications", "/administration/parametres?section=notifications"],
     ] as const) {
-      const lien = sommaire.getByRole("link", { name: new RegExp(`^${nom}`) });
-      await expect(lien).toHaveAttribute("href", ancre);
-      // Chaque ancre désigne une section qui existe.
-      await expect(page.locator(ancre)).toHaveCount(1);
+      await expect(
+        sommaire.getByRole("link", { name: new RegExp(`^${nom}`) }),
+      ).toHaveAttribute("href", cible);
     }
     // L'état est écrit, pas seulement le nom du réglage.
-    await expect(sommaire).toContainText("Aucune promotion active");
+    await expect(sommaire).toContainText("aucune promotion active");
     await expect(sommaire).toContainText(/Relais \d+,\d{2}\s€/);
+    await expect(
+      sommaire.getByRole("link", { name: /^Livraison/ }),
+    ).toHaveAttribute("aria-current", "page");
 
-    // L'ancre amène la section SOUS le bandeau collant, pas dessous lui.
-    await sommaire.getByRole("link", { name: /^Promotion/ }).click();
-    await expect(page).toHaveURL(/#promotion$/);
+    await sommaire
+      .getByRole("link", { name: /^Ambiance et promotion/ })
+      .click();
+    await expect(page).toHaveURL(/section=ambiance$/);
+    await expect(page.locator("#promotion")).toHaveCount(1);
+    await expect(page.locator("#tarifs")).toHaveCount(0);
+
+    // Le lien du tableau de bord amène la promotion SOUS le bandeau collant.
+    await page.goto("/administration/parametres?section=ambiance#promotion");
     const section = page.locator("#promotion");
     await expect(section).toBeInViewport();
     const [haut, bandeau] = await Promise.all([

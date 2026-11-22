@@ -28,15 +28,7 @@
  * petit texte accentué emploie l'or profond, `frontend-design.md`.
  */
 .entete {
-  margin: 0 0 var(--ls-space-4);
-  border: 1px solid var(--ls-border);
-  border-radius: var(--ls-radius-lg);
-  background: var(--ls-surface);
-  overflow: hidden;
-}
-
-.accueil {
-  padding: var(--ls-space-4);
+  margin: 0 0 var(--ls-space-5);
 }
 
 .surtitre {
@@ -72,7 +64,36 @@
 /* ---------- Actions directes ---------- */
 
 .actions {
-  margin: 0 0 var(--ls-space-5);
+  margin: 0;
+}
+
+/*
+ * DEUX COLONNES À PARTIR DE 960 px : « À faire » à gauche, les gestes et
+ * l'état de la boutique à droite. Empilées en dessous, « À faire » en tête.
+ */
+.grille {
+  display: grid;
+  gap: var(--ls-space-4);
+  margin-top: var(--ls-space-4);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .grille {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+.colonneDroite {
+  display: grid;
+  gap: var(--ls-space-4);
+  min-width: 0;
+}
+
+.liensPanneau {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--ls-space-4);
 }
 
 .listeActions {
@@ -172,6 +193,7 @@
  * les paliers a la main obligerait a les reprendre a chaque tuile ajoutee.
  */
 .tuiles {
+  margin: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: var(--ls-space-3);
@@ -306,8 +328,8 @@
   height: 32px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--ls-admin-pastille);
-  color: var(--ls-primary-hover);
+  background: var(--ls-famille-accueil, var(--ls-primary));
+  color: var(--ls-text-on-primary);
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -327,19 +349,26 @@
  *
  * `--ls-accent-gold-deep` sur `--ls-surface` : 5,04:1, AA.
  */
+/*
+ * L'ACTION EST UN BOUTON PLEIN, refonte du 22 novembre 2026 : son fond
+ * l'identifie, C36 ne demande donc pas de bordure. Blanc sur `--ls-primary`,
+ * 8,93:1.
+ */
 .entreeAction {
   display: inline-flex;
   align-items: center;
   min-height: var(--ls-touch-target);
-  padding: 0 var(--ls-space-2);
-  color: var(--ls-accent-gold-deep);
+  padding: 0 var(--ls-space-4);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
   font-weight: 600;
-  text-decoration: underline;
+  text-decoration: none;
   white-space: nowrap;
 }
 
 .entreeAction:hover {
-  color: var(--ls-primary-hover);
+  background: var(--ls-primary-hover);
 }
 
 /*
@@ -395,32 +424,6 @@
 .ardoisePrecision {
   width: 75%;
   height: 0.75rem;
-}
-
-/*
- * RAPPEL DU THÈME SAISONNIER, ADR-046. Fond sable, donc `--ls-text` et
- * `--ls-primary` seulement, C31. La bordure gauche est décorative, le texte
- * porte l'information.
- */
-.rappelTheme {
-  margin: 0 0 var(--ls-space-5);
-  padding: var(--ls-space-3) var(--ls-space-4);
-  border-left: 3px solid var(--ls-accent-gold-deep);
-  background: var(--ls-surface-sand);
-  color: var(--ls-text);
-}
-
-.lienRappel {
-  color: var(--ls-primary);
-  text-decoration: underline;
-}
-
-/*
- * « À traiter » précède les tuiles depuis LS-325 : il porte l'écart qui le
- * sépare d'elles, et les tuiles gardent le leur avant l'état du stock.
- */
-.panneau + .tuiles {
-  margin-top: var(--ls-space-5);
 }
 
 /*
@@ -498,4 +501,29 @@
 .lienPanneau:focus-visible {
   outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
+}
+
+/*
+ * L'AMBIANCE ET LA PROMOTION EN COURS, en texte courant : ce sont des noms, pas
+ * des chiffres, la grande taille de l'état du stock ne leur convient pas.
+ */
+.etatBoutique {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--ls-space-3);
+  margin: 0 0 var(--ls-space-2);
+}
+
+.etatBoutique dd {
+  margin: 0;
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.etatBoutique dt {
+  color: var(--ls-text-muted);
+  background: var(--ls-surface);
+  font-size: 0.875rem;
 }

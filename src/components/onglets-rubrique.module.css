@@ -1,0 +1,90 @@
+/*
+ * Onglets de la rubrique ouverte, refonte du 22 novembre 2026. Jetons
+ * seulement : `--ls-famille` vient du layout.
+ *
+ * LA RANGÉE DÉFILE À L'HORIZONTALE SOUS 390 px plutôt que de passer à la
+ * ligne : trois onglets tiennent à 320 px, et une ligne de plus repousserait
+ * le titre de l'écran. Le défilement reste dans la rangée, jamais la page.
+ */
+.onglets {
+  border-bottom: 1px solid var(--ls-border);
+  background: var(--ls-admin-barre);
+}
+
+.liste {
+  display: flex;
+  gap: var(--ls-space-1);
+  margin: 0;
+  padding: 0 var(--ls-space-4);
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+@media (min-width: 768px) {
+  .liste {
+    padding: 0 var(--ls-space-6);
+  }
+}
+
+/*
+ * 44 px DE HAUTEUR, cible tactile de `frontend-design.md`. Le trait de
+ * l'onglet courant est dans la couleur de la rubrique, doublé de la graisse :
+ * l'information ne passe pas par la couleur seule.
+ */
+/*
+ * `position: relative` CONTIENT LE TEXTE RÉSERVÉ AUX LECTEURS D'ÉCRAN : en
+ * position absolue sans ancêtre positionné, il échappait à la rangée qui
+ * défile et élargissait la page de 44 px à 320 px, mesuré.
+ */
+.onglet {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border-bottom: 3px solid transparent;
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.onglet:hover {
+  color: var(--ls-text);
+}
+
+.onglet[aria-current="page"] {
+  border-bottom-color: var(--ls-famille, var(--ls-primary));
+  color: var(--ls-text);
+  font-weight: 700;
+}
+
+.onglet:focus-visible {
+  outline-offset: -3px;
+}
+
+/* Blanc sur la couleur de la rubrique, 5,04:1 au moins, mesuré au layout. */
+.compte {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--ls-space-1);
+  border-radius: 999px;
+  background: var(--ls-famille, var(--ls-primary));
+  color: var(--ls-text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
