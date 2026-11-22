@@ -492,7 +492,10 @@ contre sa demande ; une adresse qui porte un compte figure déjà sur la carte
 de ce compte, LS-317. **Limite connue** : seules les commandes RATTACHÉES au compte
 supprimé sont dissociées ; un achat fait sans compte avec la même adresse et
 jamais rattaché reste listé. Étendre la dissociation touche l'accès à la
-facture par jeton et la portée de l'effacement, décision ouverte dans LS-336. La recherche libre de l'écran s'y applique, avec le même
+facture par jeton et la portée de l'effacement : **arbitrage de Christophe du
+22 novembre 2026, LS-336**, un achat sans compte reste un achat sans compte.
+Le risque est accepté, y compris le rattachement de ces commandes par quiconque
+recrée un compte vérifié sur la même adresse. La recherche libre de l'écran s'y applique, avec le même
 écart assumé à ADR-027 que plus bas.
 
 **Le téléphone et le contenu des adresses ne sont PAS affichés**, et cette ligne
