@@ -40,6 +40,17 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 /**
+ * UNE RÉFÉRENCE PROPOSÉE pour la prochaine déclinaison, refonte du
+ * 22 novembre 2026 : l'adresse du produit en majuscules et un rang,
+ * `BOUCLES-LUNE-DOREE-02`. Elle reste modifiable, et l'unicité se juge au
+ * serveur : une proposition déjà prise est refusée avec son motif.
+ */
+function referenceProposee(slug: string, nombre: number): string {
+  const base = slug.toUpperCase().slice(0, 26).replace(/-+$/, "");
+  return `${base}-${String(nombre + 1).padStart(2, "0")}`;
+}
+
+/**
  * Prefixe sous lequel les medias sont servis, ADR-007.
  *
  * IL VIENT DE LA CONFIGURATION ET NON DES DONNEES. `Media.chemin` porte un
@@ -125,8 +136,12 @@ export default async function PageEditeurProduit({
          * C40 : PAS DE PRECHARGEMENT, LS-213. Le fil d'Ariane est rendu sur
          * CHAQUE fiche produit ouverte, et sa cible est `force-dynamic`.
          */}
-        <Link href="/administration/categories" prefetch={false}>
-          Catalogue
+        {/*
+         * LE RETOUR MÈNE À LA LISTE DES PRODUITS, refonte du 22 novembre 2026 :
+         * il ouvrait les catégories, écran d'où la fiche ne vient jamais.
+         */}
+        <Link href="/administration/produits" prefetch={false}>
+          ‹ Retour aux produits
         </Link>
       </p>
       {/*
@@ -245,6 +260,7 @@ async function CorpsFicheProduit({
       />
       <VariantesProduit
         produitId={produit.id}
+        referenceProposee={referenceProposee(produit.slug, variantes.length)}
         variantes={variantes.map((variante) => ({
           id: variante.id,
           reference: variante.reference,

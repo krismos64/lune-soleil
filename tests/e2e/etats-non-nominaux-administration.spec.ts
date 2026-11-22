@@ -245,6 +245,14 @@ test.describe("etats non nominaux de l'administration", () => {
     await page.getByRole("button", { name: `Supprimer ${nom}` }).click();
 
     /*
+     * LA SUPPRESSION SE CONFIRME depuis la refonte du 22 novembre 2026 : le
+     * premier clic arme le bouton, le second supprime.
+     */
+    await page
+      .getByRole("button", { name: `Confirmer la suppression de ${nom}` })
+      .click();
+
+    /*
      * LE SUCCES SERVEUR D'ABORD, LA DISPARITION ENSUITE, ET L'ORDRE COMPTE.
      *
      * LA CREATION SUIT DEJA CE MOTIF vingt lignes plus haut, la suppression

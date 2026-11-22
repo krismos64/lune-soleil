@@ -94,7 +94,7 @@ export function ClassementMessage({
           setClasse(true);
           conteneur.current?.focus();
           setMessage({
-            texte: "Message classé. Rafraîchir la page pour la mettre à jour.",
+            texte: "Message classé.",
             erreur: false,
           });
           break;

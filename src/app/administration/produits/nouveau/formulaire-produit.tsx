@@ -10,6 +10,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import {
@@ -58,6 +59,7 @@ export function FormulaireProduit({
 }: {
   categories: CategorieOption[];
 }) {
+  const router = useRouter();
   const [enCours, demarrer] = useTransition();
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
@@ -99,8 +101,17 @@ export function FormulaireProduit({
       // LE MESSAGE N'EST POSE QU'APRES LE RETOUR DU SERVEUR : un succes
       // optimiste ferait croire a une creation qu'une base injoignable n'a pas
       // faite.
-      setSucces(`Produit ${nom} créé en brouillon.`);
+      setSucces(`Produit ${nom} créé en brouillon. Ouverture de sa fiche…`);
       setNom("");
+
+      /*
+       * LA FICHE S'OUVRE AUSSITÔT, refonte du 22 novembre 2026 : le brouillon
+       * n'a encore ni prix ni photo, et le formulaire vidé laissait chercher
+       * le produit dans la liste pour le compléter.
+       */
+      if (resultat.statut === "SUCCES" && resultat.produitId) {
+        router.push(`/administration/produits/${resultat.produitId}`);
+      }
     });
   }
 

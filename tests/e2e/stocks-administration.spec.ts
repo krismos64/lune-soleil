@@ -72,13 +72,13 @@ test.describe("avec une session d'administration", () => {
      * et disponible est precisement ce qui fait vendre une piece reservee.
      */
     await expect(
-      page.getByText("Physique", { exact: true }).first(),
+      page.getByText("En stock", { exact: true }).first(),
     ).toBeVisible();
     await expect(
-      page.getByText("Réservé", { exact: true }).first(),
+      page.getByText("En cours de paiement", { exact: true }).first(),
     ).toBeVisible();
     await expect(
-      page.getByText("Disponible", { exact: true }).first(),
+      page.getByText("Disponible à la vente", { exact: true }).first(),
     ).toBeVisible();
   });
 

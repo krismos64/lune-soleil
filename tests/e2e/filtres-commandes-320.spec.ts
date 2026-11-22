@@ -41,11 +41,11 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
  */
 const LIBELLES = [
   "Toutes",
-  "En attente de paiement",
-  "Confirmées",
-  "En préparation",
-  "Expédiées",
+  "À préparer",
+  "Prêtes à expédier",
+  "En route",
   "Livrées",
+  "Paiement en attente",
   "Annulées",
 ];
 

@@ -21,11 +21,15 @@ import type {
  * sans qu'aucun controle ne rougisse. Motif « un enum ajoute casse
  * l'affichage », deja rencontre sur les messages et les commandes.
  */
+/*
+ * LES MOTS DE L'EXPLOITANTE, refonte du 22 novembre 2026 : « Accusée » ou
+ * « Expédition prouvée » nommaient l'étape juridique, pas la situation.
+ */
 export const LIBELLES_RETRACTATION: Record<StatutRetractation, string> = {
-  DEPOSEE: "Déposée",
-  ACCUSEE: "Accusée",
-  RETOUR_ATTENDU: "Retour attendu",
-  EXPEDITION_PROUVEE: "Expédition prouvée",
+  DEPOSEE: "Nouvelle demande",
+  ACCUSEE: "Demande reçue",
+  RETOUR_ATTENDU: "Colis attendu",
+  EXPEDITION_PROUVEE: "Colis renvoyé par le client",
   REMBOURSEMENT_EN_COURS: "Remboursement en cours",
   REMBOURSEE: "Remboursée",
   REFUSEE: "Refusée",

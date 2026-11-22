@@ -103,12 +103,11 @@ export function DecisionAvis({
           Motif de la décision
         </label>
         <p id={identifiantAide} className={styles.aide}>
-          Obligatoire pour refuser ou retirer, règle R5.{" "}
+          Obligatoire pour refuser ou retirer.{" "}
           <strong>
             Il est envoyé par email à l&apos;auteur de l&apos;avis
-          </strong>
-          , article D111-12 : écrivez-le pour lui. Il n&apos;est jamais publié
-          sur la boutique.
+          </strong>{" "}
+          : écrivez-le pour lui. Il n&apos;est jamais publié sur la boutique.
         </p>
         <textarea
           id={identifiantMotif}

@@ -532,7 +532,7 @@ test.describe("file d'expédition", () => {
      * correct, la preuve ne l'etait pas.
      */
     await expect(page.getByLabel("Transporteur")).toHaveCount(2);
-    await expect(page.getByLabel("Mode réellement exécuté")).toHaveCount(2);
+    await expect(page.getByLabel("Mode d'envoi utilisé")).toHaveCount(2);
     await expect(page.getByLabel("Numéro de suivi")).toHaveCount(2);
     await expect(
       page.getByRole("button", { name: "Déclarer expédiée" }),
@@ -543,7 +543,7 @@ test.describe("file d'expédition", () => {
      * point de retrait : un compte de 1 prouve a la fois que le champ suit le
      * mode de sa propre carte, et qu'il ne fuit pas sur la voisine.
      */
-    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(1);
+    await expect(page.getByLabel("Point de retrait utilisé")).toHaveCount(1);
 
     /*
      * L'AVERTISSEMENT D'IRREVERSIBILITE EST SUR CHAQUE CARTE, et il est
@@ -576,15 +576,15 @@ test.describe("file d'expédition", () => {
       .locator("li")
       .filter({ hasText: COMMANDE_A_EXPEDIER_TEST.numero });
 
-    const mode = carte.getByLabel("Mode réellement exécuté");
+    const mode = carte.getByLabel("Mode d'envoi utilisé");
     await expect(mode).toHaveValue("DOMICILE");
-    await expect(carte.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+    await expect(carte.getByLabel("Point de retrait utilisé")).toHaveCount(0);
 
     await mode.selectOption("POINT_RELAIS");
-    await expect(carte.getByLabel("Point de retrait exécuté")).toBeVisible();
+    await expect(carte.getByLabel("Point de retrait utilisé")).toBeVisible();
 
     await mode.selectOption("LOCKER");
-    await expect(carte.getByLabel("Point de retrait exécuté")).toBeVisible();
+    await expect(carte.getByLabel("Point de retrait utilisé")).toBeVisible();
 
     /*
      * LE RETOUR A DOMICILE LE RETIRE, et ce sens compte autant que l'autre :
@@ -592,7 +592,7 @@ test.describe("file d'expédition", () => {
      * l'envoi, ce que la validation refuserait.
      */
     await mode.selectOption("DOMICILE");
-    await expect(carte.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+    await expect(carte.getByLabel("Point de retrait utilisé")).toHaveCount(0);
 
     /*
      * LA CARTE VOISINE N'A PAS BOUGE, et c'est ce que deux cartes permettent de
@@ -603,7 +603,7 @@ test.describe("file d'expédition", () => {
     const voisine = page
       .locator("li")
       .filter({ hasText: SECONDE_COMMANDE_A_EXPEDIER_TEST.numero });
-    await expect(voisine.getByLabel("Point de retrait exécuté")).toBeVisible();
+    await expect(voisine.getByLabel("Point de retrait utilisé")).toBeVisible();
   });
 
   /*
@@ -1099,11 +1099,17 @@ test.describe("rubrique Messages", () => {
    * impraticable a 320 px. OUVRABLE : c'est quand meme le contenu qu'on vient
    * lire, un pli qui ne s'ouvre pas serait pire que pas de pli.
    */
-  test("le corps du message est plié puis s'ouvre", async ({ page }) => {
+  test("un message court se lit sans clic, et son pli se referme", async ({
+    page,
+  }) => {
     await page.goto("/administration/messages");
 
+    /*
+     * DÉPLIÉ D'OFFICE SOUS 280 CARACTÈRES, refonte du 22 novembre 2026 : le
+     * message de test en compte une soixantaine. Le pli reste utilisable.
+     */
     const corps = page.getByText(MESSAGES_TEST.nouveau.corps);
-    await expect(corps).toBeHidden();
+    await expect(corps).toBeVisible();
 
     await page
       .locator("main ul li")
@@ -1111,7 +1117,7 @@ test.describe("rubrique Messages", () => {
       .getByText("Lire le message")
       .click();
 
-    await expect(corps).toBeVisible();
+    await expect(corps).toBeHidden();
   });
 });
 
