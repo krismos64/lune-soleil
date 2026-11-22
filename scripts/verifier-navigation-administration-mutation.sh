@@ -192,7 +192,7 @@ attendre_echec "barre retirée du layout, les listes restant cohérentes"
 # interdit. Le rendu resterait visuellement identique pour qui voit l'écran, et
 # muet pour un lecteur d'écran.
 # ---------------------------------------------------------------------------
-muter "$NAVIGATION" 's/aria-current=\{courante \? "page" : undefined\}/data-courante={courante}/'
+muter "$NAVIGATION" 's/aria-current=\{courante === rubrique \? "page" : undefined\}/data-courante={courante === rubrique}/'
 attendre_echec "aria-current retiré, l'information ne passe plus que par la couleur"
 
 # ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ attendre_echec "aria-current retiré, l'information ne passe plus que par la cou
 # reproduire l'écart : muter la barre ferait rougir les sens 1 ou 2, et le cas
 # ne dirait rien du sens 5.
 # ---------------------------------------------------------------------------
-muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis", groupe: "Relation client" \},}{}'
+muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis" \},}{}'
 attendre_echec "rubrique de la barre exercée par aucun test"
 
 # ---------------------------------------------------------------------------
@@ -217,7 +217,7 @@ attendre_echec "rubrique de la barre exercée par aucun test"
 # pourrait n'être écrit que dans une direction, et un test cherchant un lien
 # retiré échouerait par expiration de trente secondes plutôt que par diagnostic.
 # ---------------------------------------------------------------------------
-muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis", groupe: "Relation client" \},}{{ libelle: "Remises", titre: "Remises", groupe: "Relation client" },}'
+muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis" \},}{{ libelle: "Remises", titre: "Remises" },}'
 attendre_echec "test naviguant vers une rubrique absente de la barre"
 
 # ---------------------------------------------------------------------------
