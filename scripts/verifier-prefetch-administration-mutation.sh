@@ -32,7 +32,7 @@ ko=0
 # muter quoi que ce soit.
 # ---------------------------------------------------------------------------
 MUTABLES=(
-  "src/app/administration/messages/page.tsx"
+  "src/app/administration/commandes/[id]/page.tsx"
   "src/components/navigation-administration.tsx"
   "src/app/administration/error.tsx"
 )
@@ -106,11 +106,11 @@ echo
 
 # --- 1. Le défaut sur une page de route -----------------------------------
 perl -0pi -e 's/(<Link\s+href="\/administration\/commandes"\s+className=\{styles\.retour\})\s+prefetch=\{false\}/$1/' \
-  "src/app/administration/messages/page.tsx"
+  "src/app/administration/commandes/[id]/page.tsx"
 essayer "prefetch retiré d'une page de route" "rouge"
 
 # --- 2. Le défaut sur la barre latérale, hors du dossier des routes --------
-perl -0pi -e 's/\n\s+prefetch=\{false\}\n(\s+\/\*\n\s+\* `aria-current="page"`)/\n$1/' \
+perl -0pi -e 's/\n\s+prefetch=\{false\}\n(\s+aria-current=\{courante === rubrique)/\n$1/' \
   "src/components/navigation-administration.tsx"
 essayer "prefetch retiré de la barre latérale" "rouge"
 

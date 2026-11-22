@@ -141,7 +141,7 @@ echo
 # Il vise donc la balise ouvrante et la fermeture séparément, formes stables
 # quel que soit le nombre d'attributs.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's{<Link href="/administration/categories" prefetch=\{false\}>\n\s+Catalogue\n\s+</Link>}{<a href="/administration/categories">Catalogue</a>}s' "$EDITEUR"
+perl -0pi -e 's{<Link href="/administration/produits" prefetch=\{false\}>\n\s+‹ Retour aux produits\n\s+</Link>}{<a href="/administration/produits">Retour aux produits</a>}s' "$EDITEUR"
 jouer "fil d'Ariane en balise native" "page.tsx"
 
 # ---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ jouer "renvoi vers les catégories en balise native" "formulaire-produit.tsx"
 # restant vert sur un vrai défaut. C'est la raison du `sed` sur quatre lignes
 # dans le contrôle, et cette mutation est ce qui le prouve.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's{<Link href="/administration/categories" prefetch=\{false\}>\n\s+Catalogue\n\s+</Link>}{<a\n          href="/administration/categories"\n        >Catalogue</a>}s' "$EDITEUR"
+perl -0pi -e 's{<Link href="/administration/produits" prefetch=\{false\}>\n\s+‹ Retour aux produits\n\s+</Link>}{<a\n          href="/administration/produits"\n        >Retour aux produits</a>}s' "$EDITEUR"
 jouer "lien interne enveloppé sur plusieurs lignes" "page.tsx"
 
 # ---------------------------------------------------------------------------
