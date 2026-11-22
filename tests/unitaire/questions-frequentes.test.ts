@@ -10,7 +10,10 @@
 import { describe, expect, it } from "vitest";
 
 import { questionsFrequentes } from "@/app/(boutique)/aide/questions-frequentes";
-import { DELAI_EXPEDITION_JOURS_MAX } from "@/lib/livraison";
+import {
+  DELAI_EXPEDITION_JOURS_MAX,
+  libelleDelaiAcheminement,
+} from "@/lib/livraison";
 import { jsonLdQuestionsFrequentes } from "@/lib/seo";
 
 /** Des valeurs volontairement éloignées des tarifs réels. */
@@ -72,19 +75,21 @@ describe("questionsFrequentes, LS-26", () => {
     expect(texte(questionsFrequentes(null))).not.toMatch(/\d+,\d{2}\s?€/);
   });
 
-  it("n'annonce que les deux délais donnés par l'exploitante", () => {
+  it("n'annonce que les délais de l'exploitante et ceux d'ADR-035", () => {
     const contenu = texte(questionsFrequentes(CONFIGURATION));
 
-    // Réponse aux messages et dépôt du colis, l'un et l'autre donnés par
-    // l'exploitante : tout autre nombre d'heures ou de jours fait rougir, quel
-    // que soit le verbe qui l'introduit, et aucun délai d'acheminement.
+    // Réponse aux messages et dépôt du colis, donnés par l'exploitante, puis
+    // les deux délais d'acheminement d'ADR-035, LS-334 : tout autre nombre
+    // d'heures ou de jours fait rougir, quel que soit le verbe qui l'introduit.
     expect(contenu.match(/\b\d+ ?(heures?|h|jours?)\b/gi)).toEqual([
       `${DELAI_EXPEDITION_JOURS_MAX} jours`,
+      "4 jours",
+      "6 jours",
       "24 heures",
     ]);
   });
 
-  it("borne le dépôt du colis par la constante, jamais sa réception", () => {
+  it("borne le dépôt par la constante, puis annonce l'acheminement par mode", () => {
     const reponse = tout(questionsFrequentes(CONFIGURATION)).find(
       (entree) => entree.id === "faq-delai-expedition",
     )?.reponse;
@@ -92,8 +97,10 @@ describe("questionsFrequentes, LS-26", () => {
     expect(reponse).toContain(
       `au plus tard ${DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre paiement`,
     );
-    expect(reponse).toMatch(/acheminement du transporteur s'y ajoute/);
-    expect(reponse).not.toMatch(/livré|reçu|réception/i);
+    expect(reponse).toContain(
+      `en ${libelleDelaiAcheminement("POINT_RELAIS")} en Point Relais ou en Locker, et en ${libelleDelaiAcheminement("DOMICILE")} à domicile`,
+    );
+    expect(reponse).not.toMatch(/reçu|réception/i);
   });
 
   it("renvoie les retours vers la rétractation en ligne", () => {
