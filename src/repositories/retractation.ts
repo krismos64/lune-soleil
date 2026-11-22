@@ -436,8 +436,25 @@ export type DemandeEnListe = {
 export async function listerDemandes(
   client: ClientBase,
   limite: number,
+  /** Numéro de commande ou nom du client, refonte du 22 novembre 2026. */
+  recherche = "",
 ): Promise<DemandeEnListe[]> {
+  const terme = recherche.trim();
   const demandes = await client.demandeRetractation.findMany({
+    ...(terme === ""
+      ? {}
+      : {
+          where: {
+            commande: {
+              OR: [
+                { numero: { contains: terme, mode: "insensitive" as const } },
+                {
+                  nomClient: { contains: terme, mode: "insensitive" as const },
+                },
+              ],
+            },
+          },
+        }),
     orderBy: { deposeeA: "asc" },
     take: limite + 1,
     select: {

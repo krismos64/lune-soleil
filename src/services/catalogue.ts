@@ -172,8 +172,9 @@ export async function compterProduitsArchives(): Promise<number> {
  */
 export async function listerProduitsAdministration(
   statuts: readonly StatutProduit[] = STATUTS_VIVANTS,
+  recherche = "",
 ): Promise<ProduitAdministration[]> {
-  return depot.listerProduitsAdministration(prisma, { statuts });
+  return depot.listerProduitsAdministration(prisma, { statuts, recherche });
 }
 
 /**

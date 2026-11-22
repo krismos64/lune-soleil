@@ -31,6 +31,12 @@
  * `JournalAudit`, ou liste bornee sans recherche. Il a retenu la recherche
  * libre nue, en connaissance de l'ecart.
  *
+ * L'ECART S'ETEND AUX AUTRES LISTES DEPUIS LE 22 NOVEMBRE 2026, refonte de
+ * l'administration, a la demande de Christophe : commandes, retours, factures
+ * et messages se cherchent aussi par nom ou adresse email, sans preuve
+ * d'identite recente, par `RechercheListe`. Revenir sur l'arbitrage vaut pour
+ * toutes ces listes a la fois.
+ *
  * NE PAS AJOUTER LA GARDE EN CROYANT REPARER UNE NEGLIGENCE. Revenir sur
  * l'arbitrage lui appartient, et cela tient en deux gestes : poser la marque de
  * famille sur `listerClientsAdministration`, et appeler

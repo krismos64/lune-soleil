@@ -184,8 +184,10 @@ export type ListeDemandes = {
  * d'administration. Ajouter une garde ici la dupliquerait sans fermer aucun
  * chemin, une lecture ne produisant aucun effet.
  */
-export async function listerDemandesRetractation(): Promise<ListeDemandes> {
-  const lues = await listerDemandes(prisma, LIMITE_LISTE_DEMANDES);
+export async function listerDemandesRetractation(
+  recherche = "",
+): Promise<ListeDemandes> {
+  const lues = await listerDemandes(prisma, LIMITE_LISTE_DEMANDES, recherche);
 
   return {
     demandes: lues.slice(0, LIMITE_LISTE_DEMANDES),

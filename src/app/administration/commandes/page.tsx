@@ -13,6 +13,9 @@ import { Suspense } from "react";
 import { ChargementAdministration } from "@/components/chargement-administration";
 
 import Link from "next/link";
+
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -46,19 +49,24 @@ export const dynamic = "force-dynamic";
 
 /** Les filtres proposes, dans l'ordre du cycle de vie d'une commande. */
 const FILTRES: { valeur: StatutCommande | "TOUTES"; libelle: string }[] = [
+  /*
+   * LES FILTRES DISENT LE GESTE, refonte du 22 novembre 2026 : « À préparer »
+   * plutôt que « Confirmées », le vocabulaire de l'écran des expéditions. Le
+   * badge de chaque commande garde le nom exact de son statut.
+   */
   { valeur: "TOUTES", libelle: "Toutes" },
-  { valeur: "EN_ATTENTE_PAIEMENT", libelle: "En attente de paiement" },
-  { valeur: "CONFIRMEE", libelle: "Confirmées" },
-  { valeur: "EN_PREPARATION", libelle: "En préparation" },
-  { valeur: "EXPEDIEE", libelle: "Expédiées" },
+  { valeur: "CONFIRMEE", libelle: "À préparer" },
+  { valeur: "EN_PREPARATION", libelle: "Prêtes à expédier" },
+  { valeur: "EXPEDIEE", libelle: "En route" },
   { valeur: "LIVREE", libelle: "Livrées" },
+  { valeur: "EN_ATTENTE_PAIEMENT", libelle: "Paiement en attente" },
   { valeur: "ANNULEE", libelle: "Annulées" },
 ];
 
 export default async function PageCommandes({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string }>;
+  searchParams: Promise<{ statut?: string; recherche?: string }>;
 }) {
   const enTetes = await headers();
 
@@ -83,14 +91,25 @@ export default async function PageCommandes({
     (filtre) => filtre.valeur === parametres.statut,
   );
   const filtreActif = filtreDemande?.valeur ?? "TOUTES";
+  const recherche = lireTermeRecherche(parametres.recherche);
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Commandes</h1>
       <p className={styles.introduction}>
-        Les commandes en attente de paiement sont visibles : leur accumulation
-        soudaine signale une panne du paiement.
+        Ventes en ligne, de la plus récente à la plus ancienne. Les colis se
+        préparent dans l&apos;onglet Expéditions.
       </p>
+
+      <RechercheListe
+        chemin="/administration/commandes"
+        libelle="Chercher une commande"
+        exemple="Numéro, nom ou email du client"
+        terme={recherche}
+        conserver={{
+          statut: filtreActif === "TOUTES" ? undefined : filtreActif,
+        }}
+      />
 
       <nav aria-label="Filtrer par statut" className={styles.filtres}>
         <ul className={styles.listeFiltres}>
@@ -100,7 +119,11 @@ export default async function PageCommandes({
                 href={
                   filtre.valeur === "TOUTES"
                     ? "/administration/commandes"
-                    : `/administration/commandes?statut=${filtre.valeur}`
+                    : `/administration/commandes?statut=${filtre.valeur}${
+                        recherche === ""
+                          ? ""
+                          : `&recherche=${encodeURIComponent(recherche)}`
+                      }`
                 }
                 className={styles.filtre}
                 aria-current={
@@ -116,7 +139,7 @@ export default async function PageCommandes({
       </nav>
 
       <Suspense fallback={<ChargementCommandes />}>
-        <ListeCommandes filtreActif={filtreActif} />
+        <ListeCommandes filtreActif={filtreActif} recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -151,12 +174,15 @@ function ChargementCommandes() {
  */
 async function ListeCommandes({
   filtreActif,
+  recherche,
 }: {
   filtreActif: StatutCommande | "TOUTES";
+  recherche: string;
 }) {
-  const { commandes, tronquee } = await listerCommandes(
-    filtreActif === "TOUTES" ? {} : { statut: filtreActif },
-  );
+  const { commandes, tronquee } = await listerCommandes({
+    ...(filtreActif === "TOUTES" ? {} : { statut: filtreActif }),
+    recherche,
+  });
 
   return (
     <>
@@ -184,9 +210,11 @@ async function ListeCommandes({
          * prendrait pour une panne.
          */
         <p className={styles.vide}>
-          {filtreActif === "TOUTES"
-            ? "Aucune commande pour le moment."
-            : "Aucune commande dans cet état."}
+          {recherche !== ""
+            ? "Aucune commande ne correspond à cette recherche."
+            : filtreActif === "TOUTES"
+              ? "Aucune commande pour le moment."
+              : "Aucune commande dans cet état."}
         </p>
       ) : (
         <ul className={styles.listeCommandes}>

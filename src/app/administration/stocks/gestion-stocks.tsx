@@ -73,9 +73,12 @@ const LIBELLE_TYPE: Record<Mouvement["type"], string> = {
 export function GestionStocks({
   stocks,
   journal,
+  rechercheActive = false,
 }: {
   stocks: EtatStockVariante[];
   journal: Mouvement[];
+  /** Une recherche filtre la liste : l'état vide le dit. */
+  rechercheActive?: boolean;
 }) {
   const [enCours, demarrer] = useTransition();
   const [retour, setRetour] = useState<ResultatAction | null>(null);
@@ -125,7 +128,9 @@ export function GestionStocks({
 
         {stocks.length === 0 ? (
           <p className={styles.etatVide}>
-            Aucune déclinaison en catalogue pour le moment.
+            {rechercheActive
+              ? "Aucune pièce ne correspond à cette recherche."
+              : "Aucune déclinaison en catalogue pour le moment."}
           </p>
         ) : (
           <ul className={styles.listeStocks}>
@@ -147,15 +152,15 @@ export function GestionStocks({
                  */}
                 <dl className={styles.quantites}>
                   <div className={styles.quantite}>
-                    <dt>Physique</dt>
+                    <dt>En stock</dt>
                     <dd>{ligne.quantitePhysique}</dd>
                   </div>
                   <div className={styles.quantite}>
-                    <dt>Réservé</dt>
+                    <dt>En cours de paiement</dt>
                     <dd>{ligne.quantiteReservee}</dd>
                   </div>
                   <div className={styles.quantite}>
-                    <dt>Disponible</dt>
+                    <dt>Disponible à la vente</dt>
                     <dd>{ligne.quantiteDisponible}</dd>
                   </div>
                 </dl>

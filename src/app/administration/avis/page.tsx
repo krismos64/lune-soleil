@@ -18,8 +18,10 @@
  * 2026 demande explicitement de ne pas le construire sans arbitrage. Une story
  * a elle le portera si la reponse est retenue.
  */
-import Link from "next/link";
 import { Suspense } from "react";
+
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -73,7 +75,11 @@ const LIBELLES: Record<AvisAModerer["statut"], string> = {
   RETIRE: "Retiré",
 };
 
-export default async function PageAvis() {
+export default async function PageAvis({
+  searchParams,
+}: {
+  searchParams: Promise<{ recherche?: string }>;
+}) {
   const enTetes = await headers();
 
   try {
@@ -85,22 +91,27 @@ export default async function PageAvis() {
     throw erreur;
   }
 
+  const recherche = lireTermeRecherche((await searchParams).recherche);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <Link href="/administration" className={styles.retour} prefetch={false}>
-        Retour au tableau de bord
-      </Link>
-
       <h1 className={styles.titre}>Avis</h1>
 
       <p className={styles.introduction}>
-        Chaque avis est relu avant publication. Le site annonce aux clients un
-        délai de {DELAI_PUBLICATION_JOURS} jours au plus, article D111-10 du
-        Code de la consommation.
+        Chaque avis est relu avant publication. Le site annonce aux clients
+        qu&apos;un avis est publié ou refusé sous {DELAI_PUBLICATION_JOURS}{" "}
+        jours au plus : ce délai engage la boutique.
       </p>
 
+      <RechercheListe
+        chemin="/administration/avis"
+        libelle="Chercher un avis"
+        exemple="Nom du produit, numéro de commande ou mot de l'avis"
+        terme={recherche}
+      />
+
       <Suspense fallback={<ChargementAvis />}>
-        <ListesAvis />
+        <ListesAvis recherche={recherche} />
       </Suspense>
 
       {/*
@@ -142,11 +153,25 @@ function ChargementSignalements() {
  *
  * NE PAS AJOUTER `avis/loading.tsx`.
  */
-async function ListesAvis() {
-  const [aModerer, decides] = await Promise.all([
+async function ListesAvis({ recherche }: { recherche: string }) {
+  const [tousAModerer, tousDecides] = await Promise.all([
     listerAvisAModerer(),
     listerAvisDecides(),
   ]);
+
+  /*
+   * LA RECHERCHE FILTRE LES AVIS DÉJÀ LUS, refonte du 22 novembre 2026 : par
+   * le nom du produit figé, le numéro de commande ou un mot du commentaire.
+   * Les signalements, plus rares, restent entiers.
+   */
+  const terme = recherche.toLocaleLowerCase("fr-FR");
+  const correspond = (avis: (typeof tousAModerer)[number]) =>
+    terme === "" ||
+    [avis.libelleProduitFige, avis.numeroCommande, avis.commentaire ?? ""].some(
+      (texte) => texte.toLocaleLowerCase("fr-FR").includes(terme),
+    );
+  const aModerer = tousAModerer.filter(correspond);
+  const decides = tousDecides.filter(correspond);
 
   return (
     <>
@@ -156,7 +181,11 @@ async function ListesAvis() {
         </h2>
 
         {aModerer.length === 0 ? (
-          <p className={styles.vide}>Aucun avis n&apos;attend de relecture.</p>
+          <p className={styles.vide}>
+            {terme === ""
+              ? "Aucun avis n'attend de relecture."
+              : "Aucun avis à relire ne correspond à cette recherche."}
+          </p>
         ) : (
           <ul className={styles.liste}>
             {aModerer.map((avis) => (
@@ -176,7 +205,9 @@ async function ListesAvis() {
 
         {decides.length === 0 ? (
           <p className={styles.vide}>
-            Aucune décision prise pour l&apos;instant.
+            {terme === ""
+              ? "Aucune décision prise pour l'instant."
+              : "Aucune décision ne correspond à cette recherche."}
           </p>
         ) : (
           <ul className={styles.liste}>

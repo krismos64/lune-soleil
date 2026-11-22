@@ -11,6 +11,9 @@
  */
 import { Suspense } from "react";
 
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -37,7 +40,11 @@ export const metadata = {
  */
 export const dynamic = "force-dynamic";
 
-export default async function PageStocks() {
+export default async function PageStocks({
+  searchParams,
+}: {
+  searchParams: Promise<{ recherche?: string }>;
+}) {
   const enTetes = await headers();
 
   try {
@@ -49,6 +56,8 @@ export default async function PageStocks() {
     throw erreur;
   }
 
+  const recherche = lireTermeRecherche((await searchParams).recherche);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Stocks et marchés</h1>
@@ -58,8 +67,15 @@ export default async function PageStocks() {
         est refusée tant qu&apos;un paiement est en cours sur la même pièce.
       </p>
 
+      <RechercheListe
+        chemin="/administration/stocks"
+        libelle="Chercher une pièce"
+        exemple="Nom du produit, déclinaison ou référence"
+        terme={recherche}
+      />
+
       <Suspense fallback={<ChargementStocks />}>
-        <EtatDesStocks />
+        <EtatDesStocks recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -86,7 +102,7 @@ function ChargementStocks() {
  *
  * NE PAS RETABLIR `stocks/loading.tsx`.
  */
-async function EtatDesStocks() {
+async function EtatDesStocks({ recherche }: { recherche: string }) {
   /*
    * LES DEUX LECTURES SONT PARALLELES, elles ne dependent pas l'une de l'autre.
    * Les enchainer doublerait l'attente sans rien garantir de plus : aucune
@@ -98,5 +114,26 @@ async function EtatDesStocks() {
     lireJournal({ limite: 50 }),
   ]);
 
-  return <GestionStocks stocks={stocks} journal={journal} />;
+  /*
+   * LE FILTRE PORTE SUR L'ÉTAT DÉJÀ LU, refonte du 22 novembre 2026 : toutes
+   * les déclinaisons vivantes sont chargées pour l'écran, et les comparer en
+   * mémoire évite une seconde requête. Le journal des mouvements reste entier.
+   */
+  const terme = recherche.toLocaleLowerCase("fr-FR");
+  const retenus =
+    terme === ""
+      ? stocks
+      : stocks.filter((ligne) =>
+          [ligne.produitNom, ligne.libelle, ligne.reference].some((texte) =>
+            texte.toLocaleLowerCase("fr-FR").includes(terme),
+          ),
+        );
+
+  return (
+    <GestionStocks
+      stocks={retenus}
+      journal={journal}
+      rechercheActive={terme !== ""}
+    />
+  );
 }
