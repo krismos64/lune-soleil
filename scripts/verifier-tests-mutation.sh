@@ -107,6 +107,9 @@ AVIS="src/services/avis.ts"
 DEPOT_AVIS="src/repositories/avis.ts"
 ANNULATION="src/services/annulation-commande.ts"
 GESTION_PASSKEYS="src/app/administration/passkeys/gestion-passkeys.tsx"
+SEO_PRODUIT="src/lib/seo.ts"
+DELAIS_LIVRAISON="src/lib/livraison.ts"
+ETAPES_TUNNEL="src/app/(boutique)/commande/etapes-tunnel.tsx"
 SERVICE_AVOIR="src/services/avoir.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
@@ -147,7 +150,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS" "$ANNULATION" "$GESTION_PASSKEYS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS" "$ANNULATION" "$GESTION_PASSKEYS" "$SEO_PRODUIT" "$DELAIS_LIVRAISON" "$ETAPES_TUNNEL")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -3189,6 +3192,21 @@ cas "regle des trente jours remise dans l'eligibilite" integration \
 mute "$GESTION_PASSKEYS" 's/    if \(preuveExpiree\) expirationRef\.current\?\.focus\(\);/    \/\/ mutation/'
 cas "focus non deplace apres refus faute de preuve" composant \
   "bascule vers la confirmation quand la route refuse faute de preuve"
+
+# LS-334, ADR-035 : les delais d'acheminement annonces avant la commande. Trois
+# lignes de defense distinctes : le balisage transmis a Google, la constante
+# que lisent le tunnel et l'aide, et la description du bouton radio.
+mute "$SEO_PRODUIT" 's/    deliveryTime: delaiDeLivraison\(mode\),\n//'
+cas "delai de livraison retire du JSON-LD" unitaire \
+  "annonce le delai de chaque mode en jours ouvres, ADR-035"
+
+mute "$DELAIS_LIVRAISON" 's/  DOMICILE: \{ min: 4, max: 6 \},/  DOMICILE: { min: 2, max: 4 },/'
+cas "domicile annonce au delai du point de retrait" unitaire \
+  "annonce 2 a 4 jours ouvres en point de retrait, 4 a 6 a domicile"
+
+mute "$ETAPES_TUNNEL" 's/              aria-describedby=\{`delai-\$\{candidat\}`\}\n//'
+cas "delai detache du bouton radio au tunnel" e2e \
+  "chaque mode annonce son delai d'acheminement avant le choix"
 
 echo
 echo "-----------------------------------------"
