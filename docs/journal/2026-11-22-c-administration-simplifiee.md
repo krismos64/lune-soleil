@@ -144,10 +144,13 @@ d'administration ne se fabrique pas sans supprimer le compte de l'exploitante
 la suite de bout en bout, aux quatre largeurs ; la vérification à l'œil en
 production revient à Christophe ou à l'exploitante.
 
+## Validation
+
+Christophe, après la mise en production : « je valide tout ».
+
 ## Prochaine étape
 
-Contrôle à l'œil des sept rubriques, de l'aperçu d'une ambiance et d'une
-recherche, avec la session de l'exploitante. Nocturne suivant : premier
+Nocturne suivant : premier
 passage du script central de mutations sur le code refondu. Puis, sur
 demande : fiche produit en formulaire unique, barre d'onglets mobile,
 recherche globale.
