@@ -31,6 +31,8 @@
  */
 export const DESTINATIONS = {
   parametres: "/administration/parametres",
+  notifications: "/administration/parametres?section=notifications",
+  promotion: "/administration/parametres?section=ambiance#promotion",
   commandes: "/administration/commandes",
   retractations: "/administration/retractations",
   passkeys: "/administration/passkeys",
@@ -58,6 +60,8 @@ export const DESTINATION_PAR_DEFAUT: CleDestination = "tableau";
  */
 export const MOTIFS: Record<CleDestination, string> = {
   parametres: "avant de modifier les paramètres de la boutique",
+  notifications: "avant de modifier les notifications de la boutique",
+  promotion: "avant de lancer ou d'arrêter une promotion",
   commandes: "avant de rembourser une commande",
   retractations: "avant de traiter une demande de rétractation",
   passkeys: "avant d'ajouter ou de retirer une passkey",

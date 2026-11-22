@@ -43,8 +43,8 @@ export const schemaThemeSaisonnier = z.enum(THEMES_SAISONNIERS);
  */
 export const LIBELLES_THEMES: Record<ThemeSaisonnier, string> = {
   AUCUN: "aucun thème",
-  NOEL_1: "Noël 1 (sobre)",
-  NOEL_2: "Noël 2 (franc)",
+  NOEL_1: "Noël discret",
+  NOEL_2: "Noël festif",
   BLACK_WEEK: "Black Week",
   NOUVEL_AN: "Nouvel An",
   SOLDES_HIVER: "Soldes d'hiver",

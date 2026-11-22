@@ -53,8 +53,16 @@ test.describe("En-tetes de securite", () => {
        * l'en-tete : une CSP reduite a `default-src 'self'` passerait un test qui
        * verifie juste qu'elle existe, en laissant ouvert tout ce qui compte.
        */
+      /*
+       * `'self'` ET NON `'none'` depuis le 22 novembre 2026, ADR-038 amende :
+       * seul le site lui-meme peut s'encadrer, pour l'apercu des ambiances.
+       * Aucune autre origine n'est admise.
+       */
       expect(csp, `frame-ancestors sur ${chemin}`).toContain(
-        "frame-ancestors 'none'",
+        "frame-ancestors 'self'",
+      );
+      expect(csp, `frame-ancestors sur ${chemin}`).not.toMatch(
+        /frame-ancestors[^;]*(https?:|\*)/,
       );
       expect(csp, `object-src sur ${chemin}`).toContain("object-src 'none'");
       expect(csp, `base-uri sur ${chemin}`).toContain("base-uri 'self'");

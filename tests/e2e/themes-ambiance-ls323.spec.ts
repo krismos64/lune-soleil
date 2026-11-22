@@ -260,7 +260,7 @@ test.describe("aperçu de l'administratrice", () => {
   test("l'écran des paramètres range les douze thèmes par famille, avec leurs aperçus", async ({
     page,
   }) => {
-    await page.goto("/administration/parametres");
+    await page.goto("/administration/parametres?section=ambiance");
     const groupe = page.getByRole("group", { name: "Thème saisonnier" });
     for (const theme of THEMES) {
       await expect(
@@ -270,12 +270,12 @@ test.describe("aperçu de l'administratrice", () => {
         }),
         theme,
       ).toBeVisible();
+      // Un aperçu par ambiance, en fenêtre depuis le 22 novembre 2026.
       await expect(
-        groupe.locator(`a[href="${accueil(theme)}"]`),
-        theme,
-      ).toHaveCount(1);
-      await expect(
-        groupe.locator(`a[href="${catalogue(theme)}"]`),
+        groupe.getByRole("button", {
+          name: `Aperçu de ${LIBELLES_THEMES[theme]}`,
+          exact: true,
+        }),
         theme,
       ).toHaveCount(1);
     }

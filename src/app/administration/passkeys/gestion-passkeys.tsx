@@ -322,7 +322,7 @@ export function GestionPasskeys({
       ) : null}
 
       <section className={styles.section}>
-        <h2 className={styles.titreSection}>Vos passkeys enregistrées</h2>
+        <h2 className={styles.titreSection}>Appareils enregistrés</h2>
 
         {passkeys.length === 0 ? (
           <p className={styles.aide}>

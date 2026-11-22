@@ -92,10 +92,20 @@ function messageDe(
   }
 }
 
+/**
+ * LE FORMULAIRE SE MONTRE EN DEUX SECTIONS, refonte du 22 novembre 2026 :
+ * « Livraison » et « Notifications ». L'action serveur reste UNE, et
+ * enregistre tout : chaque section renvoie en champs cachés les valeurs
+ * actuelles de l'autre, sans quoi enregistrer les tarifs remettrait les
+ * alertes à zéro. Une case cochée se transmet par sa seule présence,
+ * `interrupteur` dans `actions.ts`.
+ */
 export function FormulaireParametres({
   parametres,
+  section,
 }: {
   parametres: ParametresLus;
+  section: "livraison" | "notifications";
 }) {
   const [resultat, action, enCours] = useActionState<
     ResultatParametres | null,
@@ -123,165 +133,232 @@ export function FormulaireParametres({
     <form
       action={action}
       className={styles.formulaire}
-      id="tarifs"
+      id={section === "livraison" ? "tarifs" : "notifications"}
       tabIndex={-1}
     >
-      <fieldset className={styles.groupe}>
-        <legend className={styles.legende}>Livraison</legend>
-
-        <div className={styles.champ}>
-          <label htmlFor="tarifRelais" className={styles.libelle}>
-            Point Relais et Locker, en euros
-          </label>
-          <p id="aide-relais" className={styles.aide}>
-            Le même tarif s&apos;applique aux deux modes de retrait.
-          </p>
+      {section === "notifications" ? (
+        <>
           <input
-            id="tarifRelais"
-            {...marqueurs("tarifRelais")}
+            type="hidden"
             name="tarifRelais"
-            type="text"
-            inputMode="decimal"
-            defaultValue={centimesVersSaisie(parametres.tarifRelaisCentimes)}
-            aria-describedby="aide-relais"
-            className={styles.saisie}
-            required
+            value={centimesVersSaisie(parametres.tarifRelaisCentimes)}
           />
-        </div>
-
-        <div className={styles.champ}>
-          <label htmlFor="tarifDomicile" className={styles.libelle}>
-            Livraison à domicile, en euros
-          </label>
           <input
-            id="tarifDomicile"
-            {...marqueurs("tarifDomicile")}
+            type="hidden"
             name="tarifDomicile"
-            type="text"
-            inputMode="decimal"
-            defaultValue={centimesVersSaisie(parametres.tarifDomicileCentimes)}
-            className={styles.saisie}
-            required
+            value={centimesVersSaisie(parametres.tarifDomicileCentimes)}
           />
-        </div>
-
-        <div className={styles.champ}>
-          <label htmlFor="seuilFranchise" className={styles.libelle}>
-            Livraison offerte à partir de, en euros
-          </label>
-          {/*
-           * LE CHAMP VIDE A UN SENS, ET IL EST DIT. Trois etats se saisissent
-           * ici, et les confondre change le montant facture : vide desactive,
-           * zero offre toujours, un montant fixe le seuil.
-           */}
-          <p id="aide-seuil" className={styles.aide}>
-            Laissez vide pour ne rien offrir. Zéro offre la livraison en Point
-            Relais quel que soit le montant. La livraison à domicile n&apos;est
-            jamais offerte.
-          </p>
           <input
-            id="seuilFranchise"
-            {...marqueurs("seuilFranchise")}
+            type="hidden"
             name="seuilFranchise"
-            type="text"
-            inputMode="decimal"
-            defaultValue={
+            value={
               parametres.seuilFranchiseCentimes === null
                 ? ""
                 : centimesVersSaisie(parametres.seuilFranchiseCentimes)
             }
-            aria-describedby="aide-seuil"
-            className={styles.saisie}
           />
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.groupe}>
-        <legend className={styles.legende}>Alertes</legend>
-
-        <div className={styles.champ}>
-          <label htmlFor="emailAlertes" className={styles.libelle}>
-            Adresse qui reçoit les alertes
-          </label>
-          <p id="aide-email" className={styles.aide}>
-            Une seule adresse pour toutes les alertes ci-dessous.
-          </p>
           <input
-            id="emailAlertes"
-            {...marqueurs("emailAlertes")}
-            name="emailAlertes"
-            type="email"
-            defaultValue={parametres.emailAlertes}
-            aria-describedby="aide-email"
-            className={styles.saisie}
-            required
-          />
-        </div>
-
-        <div className={styles.champ}>
-          <label htmlFor="seuilStockFaible" className={styles.libelle}>
-            Alerter quand une pièce descend à ce nombre d&apos;exemplaires
-          </label>
-          <input
-            id="seuilStockFaible"
-            {...marqueurs("seuilStockFaible")}
-            name="seuilStockFaible"
-            type="number"
-            min={1}
-            step={1}
-            defaultValue={parametres.seuilStockFaible}
-            className={styles.saisie}
-            required
-          />
-        </div>
-
-        <div className={styles.champ}>
-          <label htmlFor="poidsColisGrammes" className={styles.libelle}>
-            Poids déclaré au transporteur, en grammes
-          </label>
-          <input
-            id="poidsColisGrammes"
-            {...marqueurs("poidsColisGrammes")}
+            type="hidden"
             name="poidsColisGrammes"
-            type="number"
-            min={15}
-            max={250}
-            step={1}
-            defaultValue={parametres.poidsColisGrammes}
-            aria-describedby="aide-poids"
-            className={styles.saisie}
-            required
+            value={parametres.poidsColisGrammes}
           />
-          {/*
-            L'AIDE DIT LA CONSEQUENCE, PAS SEULEMENT LA BORNE. Un poids au-dela
-            de 250 g ferait acheter une etiquette de la mauvaise tranche, que le
-            transporteur rattrape en facturant APRES coup : rien a l'ecran ne le
-            signalerait, d'ou la phrase plutot qu'un simple « entre 15 et 250 ».
-          */}
-          <p id="aide-poids" className={styles.aide}>
-            Poids forfaitaire annoncé pour chaque colis, emballage compris. La
-            tarification du transporteur s&apos;arrête à 250 g : au-delà, un
-            supplément serait facturé après l&apos;envoi.
-          </p>
-        </div>
-
-        <ul className={styles.interrupteurs}>
-          {ALERTES.map((alerte) => (
-            <li key={alerte.nom} className={styles.interrupteur}>
+        </>
+      ) : (
+        <>
+          <input
+            type="hidden"
+            name="emailAlertes"
+            value={parametres.emailAlertes}
+          />
+          <input
+            type="hidden"
+            name="seuilStockFaible"
+            value={parametres.seuilStockFaible}
+          />
+          {ALERTES.filter((alerte) => parametres[alerte.cle] === true).map(
+            (alerte) => (
               <input
-                id={alerte.nom}
+                key={alerte.nom}
+                type="hidden"
                 name={alerte.nom}
-                type="checkbox"
-                defaultChecked={parametres[alerte.cle] === true}
-                className={styles.caseACocher}
+                value="on"
               />
-              <label htmlFor={alerte.nom} className={styles.libelleCase}>
-                {alerte.libelle}
+            ),
+          )}
+        </>
+      )}
+
+      {section === "livraison" ? (
+        <fieldset className={styles.groupe}>
+          <legend className={styles.legende}>Livraison</legend>
+
+          <div className={styles.champ}>
+            <label htmlFor="tarifRelais" className={styles.libelle}>
+              Point Relais et Locker, en euros
+            </label>
+            <p id="aide-relais" className={styles.aide}>
+              Le même tarif s&apos;applique aux deux modes de retrait.
+            </p>
+            <input
+              id="tarifRelais"
+              {...marqueurs("tarifRelais")}
+              name="tarifRelais"
+              type="text"
+              inputMode="decimal"
+              defaultValue={centimesVersSaisie(parametres.tarifRelaisCentimes)}
+              aria-describedby="aide-relais"
+              className={styles.saisie}
+              required
+            />
+          </div>
+
+          <div className={styles.champ}>
+            <label htmlFor="tarifDomicile" className={styles.libelle}>
+              Livraison à domicile, en euros
+            </label>
+            <input
+              id="tarifDomicile"
+              {...marqueurs("tarifDomicile")}
+              name="tarifDomicile"
+              type="text"
+              inputMode="decimal"
+              defaultValue={centimesVersSaisie(
+                parametres.tarifDomicileCentimes,
+              )}
+              className={styles.saisie}
+              required
+            />
+          </div>
+
+          <div className={styles.champ}>
+            <label htmlFor="seuilFranchise" className={styles.libelle}>
+              Livraison offerte à partir de, en euros
+            </label>
+            {/*
+             * LE CHAMP VIDE A UN SENS, ET IL EST DIT. Trois etats se saisissent
+             * ici, et les confondre change le montant facture : vide desactive,
+             * zero offre toujours, un montant fixe le seuil.
+             */}
+            <p id="aide-seuil" className={styles.aide}>
+              Laissez vide pour ne rien offrir. Zéro offre la livraison en Point
+              Relais quel que soit le montant. La livraison à domicile
+              n&apos;est jamais offerte.
+            </p>
+            <input
+              id="seuilFranchise"
+              {...marqueurs("seuilFranchise")}
+              name="seuilFranchise"
+              type="text"
+              inputMode="decimal"
+              defaultValue={
+                parametres.seuilFranchiseCentimes === null
+                  ? ""
+                  : centimesVersSaisie(parametres.seuilFranchiseCentimes)
+              }
+              aria-describedby="aide-seuil"
+              className={styles.saisie}
+            />
+          </div>
+          {/*
+           * LE POIDS DU COLIS EST UN RÉGLAGE DE LIVRAISON, rangé jusqu'ici dans
+           * les alertes. Rarement changé, il se replie sous « Réglage avancé ».
+           */}
+          <details
+            className={styles.avance}
+            open={champFautif === "poidsColisGrammes" ? true : undefined}
+          >
+            <summary className={styles.resumeAvance}>
+              Réglage avancé : poids du colis
+            </summary>
+            <div className={styles.champ}>
+              <label htmlFor="poidsColisGrammes" className={styles.libelle}>
+                Poids déclaré au transporteur, en grammes
               </label>
-            </li>
-          ))}
-        </ul>
-      </fieldset>
+              <input
+                id="poidsColisGrammes"
+                {...marqueurs("poidsColisGrammes")}
+                name="poidsColisGrammes"
+                type="number"
+                min={15}
+                max={250}
+                step={1}
+                defaultValue={parametres.poidsColisGrammes}
+                aria-describedby="aide-poids"
+                className={styles.saisie}
+                required
+              />
+              {/*
+              L'AIDE DIT LA CONSEQUENCE, PAS SEULEMENT LA BORNE. Un poids au-dela
+              de 250 g ferait acheter une etiquette de la mauvaise tranche, que le
+              transporteur rattrape en facturant APRES coup : rien a l'ecran ne le
+              signalerait, d'ou la phrase plutot qu'un simple « entre 15 et 250 ».
+            */}
+              <p id="aide-poids" className={styles.aide}>
+                Poids forfaitaire annoncé pour chaque colis, emballage compris.
+                La tarification du transporteur s&apos;arrête à 250 g : au-delà,
+                un supplément serait facturé après l&apos;envoi.
+              </p>
+            </div>
+          </details>
+        </fieldset>
+      ) : (
+        <fieldset className={styles.groupe}>
+          <legend className={styles.legende}>Notifications</legend>
+
+          <div className={styles.champ}>
+            <label htmlFor="emailAlertes" className={styles.libelle}>
+              Adresse qui reçoit les alertes
+            </label>
+            <p id="aide-email" className={styles.aide}>
+              Une seule adresse pour toutes les notifications ci-dessous.
+            </p>
+            <input
+              id="emailAlertes"
+              {...marqueurs("emailAlertes")}
+              name="emailAlertes"
+              type="email"
+              defaultValue={parametres.emailAlertes}
+              aria-describedby="aide-email"
+              className={styles.saisie}
+              required
+            />
+          </div>
+
+          <div className={styles.champ}>
+            <label htmlFor="seuilStockFaible" className={styles.libelle}>
+              Alerter quand une pièce descend à ce nombre d&apos;exemplaires
+            </label>
+            <input
+              id="seuilStockFaible"
+              {...marqueurs("seuilStockFaible")}
+              name="seuilStockFaible"
+              type="number"
+              min={1}
+              step={1}
+              defaultValue={parametres.seuilStockFaible}
+              className={styles.saisie}
+              required
+            />
+          </div>
+
+          <ul className={styles.interrupteurs}>
+            {ALERTES.map((alerte) => (
+              <li key={alerte.nom} className={styles.interrupteur}>
+                <input
+                  id={alerte.nom}
+                  name={alerte.nom}
+                  type="checkbox"
+                  defaultChecked={parametres[alerte.cle] === true}
+                  className={styles.caseACocher}
+                />
+                <label htmlFor={alerte.nom} className={styles.libelleCase}>
+                  {alerte.libelle}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
 
       {/*
        * LA REGION LIVE PORTE L'ATTENTE ET LE RESULTAT, comme les trois ecrans
@@ -335,7 +412,9 @@ export function FormulaireParametres({
            * repart, et recommence sans fin tant que le lien est a l'ecran.
            */}
           <Link
-            href="/administration/reauthentification?retour=parametres"
+            href={`/administration/reauthentification?retour=${
+              section === "notifications" ? "notifications" : "parametres"
+            }`}
             prefetch={false}
           >
             Confirmer mon identité

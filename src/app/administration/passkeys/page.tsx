@@ -45,7 +45,7 @@ import { GestionPasskeys } from "./gestion-passkeys";
 import styles from "./passkeys.module.css";
 
 export const metadata = {
-  title: "Vos passkeys",
+  title: "Appareils de connexion",
   robots: { index: false, follow: false },
 };
 
@@ -96,12 +96,12 @@ export default async function PagePasskeys() {
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1>Vos passkeys</h1>
+      <h1>Appareils de connexion</h1>
 
       <p className={styles.introduction}>
-        Une passkey vous connecte par Face&nbsp;ID, Touch&nbsp;ID ou le code de
-        votre appareil, sans mot de passe à retenir. Enregistrez-en une par
-        appareil que vous utilisez.
+        Chaque appareil enregistré vous connecte par Face&nbsp;ID, Touch&nbsp;ID
+        ou son code, sans mot de passe à retenir. Cette clé s&apos;appelle une
+        passkey. Enregistrez-en une par appareil.
       </p>
 
       {/*
