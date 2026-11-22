@@ -110,15 +110,39 @@ export const LIMITE_LISTE_COMMANDES = 100;
 
 export async function listerCommandes({
   statut,
+  recherche,
   limite = LIMITE_LISTE_COMMANDES,
   client = prisma,
 }: {
   statut?: StatutCommande;
+  /**
+   * Un numéro de commande, un nom ou une adresse email, sans tenir compte des
+   * majuscules. Refonte du 22 novembre 2026 ; le terme vient de
+   * `lireTermeRecherche`, déjà borné.
+   */
+  recherche?: string;
   limite?: number;
   client?: typeof prisma;
 } = {}): Promise<ListeCommandes> {
+  const terme = recherche?.trim() ?? "";
   const commandes = await client.commande.findMany({
-    ...(statut === undefined ? {} : { where: { statut } }),
+    where: {
+      ...(statut === undefined ? {} : { statut }),
+      ...(terme === ""
+        ? {}
+        : {
+            OR: [
+              { numero: { contains: terme, mode: "insensitive" as const } },
+              { nomClient: { contains: terme, mode: "insensitive" as const } },
+              {
+                emailNormalise: {
+                  contains: terme.toLowerCase(),
+                  mode: "insensitive" as const,
+                },
+              },
+            ],
+          }),
+    },
     orderBy: { creeA: "desc" },
     /*
      * `limite + 1`, LS-163 : une ligne de plus que ce qui sera rendu suffit a

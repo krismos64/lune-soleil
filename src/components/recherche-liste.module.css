@@ -1,0 +1,72 @@
+/*
+ * Recherche d'une liste de l'administration, refonte du 22 novembre 2026.
+ * Jetons seulement. Le libellé est visible : un `placeholder` seul disparaît
+ * à la saisie et n'est pas un nom accessible fiable.
+ */
+.recherche {
+  margin-bottom: var(--ls-space-4);
+}
+
+.libelle {
+  display: block;
+  margin-bottom: var(--ls-space-2);
+  background: var(--ls-background);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Le champ et le bouton passent à la ligne à 320 px plutôt que de déborder. */
+.ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.champ {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+/* @bordure-decorative le bouton porte son propre fond plein, qui l'identifie. */
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover {
+  background: var(--ls-primary-hover);
+}
+
+.rappel {
+  margin: var(--ls-space-2) 0 0;
+  background: var(--ls-background);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+}
+
+/* 44 px de cible : le lien d'effacement se touche du doigt. */
+.lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  background: var(--ls-background);
+  text-decoration: underline;
+}

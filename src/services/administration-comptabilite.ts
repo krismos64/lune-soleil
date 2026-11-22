@@ -76,6 +76,7 @@ export type VueComptable = {
 export async function lireVueComptable(
   periode: PeriodeComptable = {},
   client: typeof prisma = prisma,
+  recherche = "",
 ): Promise<VueComptable> {
   /*
    * LES BORNES SONT ETALEES PAR SPREAD CONDITIONNEL, jamais passees a
@@ -89,6 +90,7 @@ export async function lireVueComptable(
     ...(periode.depuis ? { depuis: periode.depuis } : {}),
     ...(periode.jusqua ? { jusqua: periode.jusqua } : {}),
     limite: PLAFOND_PIECES,
+    recherche,
   });
 
   return {

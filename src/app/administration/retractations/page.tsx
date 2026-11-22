@@ -19,6 +19,9 @@
  */
 import { Suspense } from "react";
 
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
@@ -55,7 +58,11 @@ export const metadata = {
  */
 export const dynamic = "force-dynamic";
 
-export default async function PageRetractations() {
+export default async function PageRetractations({
+  searchParams,
+}: {
+  searchParams: Promise<{ recherche?: string }>;
+}) {
   const enTetes = await headers();
 
   try {
@@ -67,12 +74,21 @@ export default async function PageRetractations() {
     throw erreur;
   }
 
+  const recherche = lireTermeRecherche((await searchParams).recherche);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Rétractations</h1>
 
+      <RechercheListe
+        chemin="/administration/retractations"
+        libelle="Chercher une demande"
+        exemple="Numéro de commande ou nom du client"
+        terme={recherche}
+      />
+
       <Suspense fallback={<ChargementRetractations />}>
-        <ListeDemandes />
+        <ListeDemandes recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -106,8 +122,8 @@ function ChargementRetractations() {
  *
  * NE PAS RETABLIR `retractations/loading.tsx`.
  */
-async function ListeDemandes() {
-  const { demandes, tronquee } = await listerDemandesRetractation();
+async function ListeDemandes({ recherche }: { recherche: string }) {
+  const { demandes, tronquee } = await listerDemandesRetractation(recherche);
 
   /*
    * LES DEMANDES A TRAITER SONT COMPTEES A PART. Une demande refusee ou
@@ -156,7 +172,9 @@ async function ListeDemandes() {
     <>
       <p className={styles.introduction}>
         {demandes.length === 0
-          ? "Aucune demande de rétractation."
+          ? recherche === ""
+            ? "Aucune demande de rétractation."
+            : "Aucune demande ne correspond à cette recherche."
           : `${demandes.length} demande${demandes.length > 1 ? "s" : ""}, dont ${aTraiter} à traiter.`}
       </p>
 

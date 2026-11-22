@@ -21,6 +21,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -72,7 +75,7 @@ const FORMAT_DATE = new Intl.DateTimeFormat("fr-FR", {
 export default async function PageFactures({
   searchParams,
 }: {
-  searchParams: Promise<{ periode?: string }>;
+  searchParams: Promise<{ periode?: string; recherche?: string }>;
 }) {
   try {
     await exigerAdministratrice(await headers());
@@ -93,14 +96,23 @@ export default async function PageFactures({
    * lien partage avec un parametre perime doit montrer quelque chose.
    */
   const periodeActive = reconnaitrePeriode(parametres.periode);
+  const recherche = lireTermeRecherche(parametres.recherche);
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Factures et avoirs</h1>
 
       <p className={styles.introduction}>
-        Les documents émis sont immuables et numérotés sans rupture. Une facture
-        ne se corrige jamais : elle s&apos;accompagne d&apos;un avoir.
+        Une facture ne se modifie pas : un remboursement crée un avoir, qui la
+        corrige.
       </p>
+
+      <RechercheListe
+        chemin="/administration/factures"
+        libelle="Chercher une facture ou un avoir"
+        exemple="Numéro de document ou de commande, nom du client"
+        terme={recherche}
+        conserver={{ periode: parametres.periode }}
+      />
 
       {/*
        * LES TROIS COMPTAGES, forme du prototype.
@@ -112,7 +124,7 @@ export default async function PageFactures({
        * verifier a la main. Motif « numerateur et denominateur apparies ».
        */}
       <Suspense fallback={<ChargementFactures />}>
-        <VueComptable periodeActive={periodeActive} />
+        <VueComptable periodeActive={periodeActive} recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -149,10 +161,16 @@ function ChargementFactures() {
  */
 async function VueComptable({
   periodeActive,
+  recherche,
 }: {
   periodeActive: ReturnType<typeof reconnaitrePeriode>;
+  recherche: string;
 }) {
-  const vue = await lireVueComptable(bornesDePeriode(periodeActive));
+  const vue = await lireVueComptable(
+    bornesDePeriode(periodeActive),
+    undefined,
+    recherche,
+  );
 
   const aucunePiece = vue.pieces.length === 0;
 
@@ -177,7 +195,9 @@ async function VueComptable({
            * remboursement est emis, et laisserait croire a une recette reelle.
            * Le libelle dit ce que le nombre est, la somme des pieces affichees.
            */}
-          <span className={styles.comptageLibelle}>Total de la période</span>
+          <span className={styles.comptageLibelle}>
+            {recherche === "" ? "Total de la période" : "Total des résultats"}
+          </span>
           {/*
            * LE TOTAL EST CALCULE COTE SERVEUR, en centimes entiers, invariant 1.
            * Le navigateur ne somme jamais des montants : un flottant y
@@ -250,9 +270,11 @@ async function VueComptable({
          * qu'il n'y en a nulle part, alors que le filtre suffit a l'expliquer.
          */
         <p className={styles.vide}>
-          {periodeActive === "tout"
-            ? "Aucune facture n'a encore été émise. La première le sera au premier paiement confirmé."
-            : "Aucun document sur cette période. Choisissez une autre période pour élargir la recherche."}
+          {recherche !== ""
+            ? "Aucun document ne correspond à cette recherche sur cette période."
+            : periodeActive === "tout"
+              ? "Aucune facture n'a encore été émise. La première le sera au premier paiement confirmé."
+              : "Aucun document sur cette période. Choisissez une autre période pour élargir la recherche."}
         </p>
       ) : (
         <>

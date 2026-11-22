@@ -293,9 +293,23 @@ export type PieceComptable = {
  */
 export async function listerPiecesComptables(
   client: ClientBase,
-  options: { depuis?: Date; jusqua?: Date; limite: number },
+  options: {
+    depuis?: Date;
+    jusqua?: Date;
+    limite: number;
+    /**
+     * Numéro du document, numéro de commande ou nom du client, refonte du
+     * 22 novembre 2026. Un avoir se trouve aussi par sa facture d'origine.
+     */
+    recherche?: string;
+  },
 ): Promise<{ pieces: PieceComptable[]; limiteAtteinte: boolean }> {
   const { depuis, jusqua, limite } = options;
+  const terme = options.recherche?.trim() ?? "";
+  const contient = { contains: terme, mode: "insensitive" as const };
+  const commandeCorrespond = {
+    OR: [{ numero: contient }, { nomClient: contient }],
+  };
 
   /*
    * LA BORNE HAUTE EST INCLUSIVE COTE APPELANT, ET C'EST LUI QUI LA CONSTRUIT.
@@ -313,7 +327,12 @@ export async function listerPiecesComptables(
 
   const [factures, avoirs] = await Promise.all([
     client.facture.findMany({
-      where: fenetre ? { emiseA: fenetre } : {},
+      where: {
+        ...(fenetre ? { emiseA: fenetre } : {}),
+        ...(terme === ""
+          ? {}
+          : { OR: [{ numero: contient }, { commande: commandeCorrespond }] }),
+      },
       orderBy: { emiseA: "desc" },
       take: limite + 1,
       select: {
@@ -326,7 +345,18 @@ export async function listerPiecesComptables(
       },
     }),
     client.avoir.findMany({
-      where: fenetre ? { emisA: fenetre } : {},
+      where: {
+        ...(fenetre ? { emisA: fenetre } : {}),
+        ...(terme === ""
+          ? {}
+          : {
+              OR: [
+                { numero: contient },
+                { facture: { numero: contient } },
+                { facture: { commande: commandeCorrespond } },
+              ],
+            }),
+      },
       orderBy: { emisA: "desc" },
       take: limite + 1,
       select: {

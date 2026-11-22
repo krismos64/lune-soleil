@@ -189,6 +189,10 @@ test.describe("connectee en administration", () => {
 
     await page
       .getByRole("navigation", { name: "Sections de l'administration" })
+      .getByRole("link", { name: /^Retours et factures/ })
+      .click();
+    await page
+      .getByRole("navigation", { name: "Retours et factures", exact: true })
       .getByRole("link", { name: "Factures et avoirs" })
       .click();
 
@@ -297,7 +301,20 @@ test.describe("connectee en administration", () => {
      * CE QUI EST MESURE EST BIEN LE CONTENU. Une Server Action de cet ecran s'y
      * afficherait forcement, un formulaire ne vivant pas dans la barre.
      */
-    await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+    /*
+     * LA RECHERCHE EST EXCLUE, ET ELLE SEULE, depuis la refonte du
+     * 22 novembre 2026 : un formulaire `GET` qui filtre la liste et n'écrit
+     * rien. Le compte porte sur tout le reste du contenu.
+     */
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("button")
+        .filter({ hasNotText: /^Rechercher$/ }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("main").getByRole("search").getByRole("button"),
+    ).toHaveCount(1);
   });
 
   /*

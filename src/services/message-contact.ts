@@ -417,9 +417,10 @@ export async function listerMessages(
   statut?: StatutMessage,
   /** LS-243 : `true` lit les seuls archives. */
   archives = false,
+  recherche = "",
 ): Promise<ListeMessages> {
   const [lus, comptes] = await Promise.all([
-    listerMessagesEnBase(client, LIMITE_LISTE + 1, statut, archives),
+    listerMessagesEnBase(client, LIMITE_LISTE + 1, statut, archives, recherche),
     compterMessagesEnBase(client),
   ]);
 

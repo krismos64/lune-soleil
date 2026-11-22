@@ -905,7 +905,7 @@ export async function compterProduitsParStatut(
  */
 export async function listerProduitsAdministration(
   client: ClientBase,
-  filtre: { statuts?: readonly StatutProduit[] } = {},
+  filtre: { statuts?: readonly StatutProduit[]; recherche?: string } = {},
 ): Promise<ProduitAdministration[]> {
   /*
    * LE FILTRE EST PARAMETRE, JAMAIS CONCATENE. Il vient d'une URL, donc d'une
@@ -932,6 +932,19 @@ export async function listerProduitsAdministration(
           filtre.statuts.map((statut) => Prisma.sql`${statut}`),
         )}]::"StatutProduit"[]`})`
       : Prisma.empty;
+
+  /*
+   * LA RECHERCHE PORTE SUR LE NOM DU PRODUIT ET CELUI DE SA CATÉGORIE, refonte
+   * du 22 novembre 2026. Le terme part en PARAMÈTRE, jamais concaténé ; `%`,
+   * `_` et la barre oblique inverse y sont échappés pour qu'un « 50 % » se
+   * cherche tel quel au lieu de tout désigner.
+   */
+  const terme = filtre.recherche?.trim() ?? "";
+  const motif = `%${terme.replace(/[\\%_]/g, "\\$&")}%`;
+  const conditionRecherche =
+    terme === ""
+      ? Prisma.empty
+      : Prisma.sql`AND (p.nom ILIKE ${motif} OR c.nom ILIKE ${motif})`;
 
   const lignes = await client.$queryRaw<
     {
@@ -964,6 +977,7 @@ export async function listerProduitsAdministration(
     -- LS-266, UN PRODUIT RETIRÉ N'APPARAÎT DANS AUCUN ONGLET, Archivés compris.
     WHERE p.retire_a IS NULL
     ${conditionStatut}
+    ${conditionRecherche}
     GROUP BY p.id, p.nom, c.nom, p.statut, p.publie_a, p.modifie_a, m.chemin
     ORDER BY p.modifie_a DESC
   `;

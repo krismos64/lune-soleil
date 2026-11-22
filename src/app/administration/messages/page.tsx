@@ -27,6 +27,9 @@
  * Une reponse integree reste possible plus tard, dans une story a elle.
  */
 import Link from "next/link";
+
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
 import { Suspense } from "react";
 
 import { headers } from "next/headers";
@@ -108,7 +111,7 @@ const FILTRES: {
 export default async function PageMessages({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string }>;
+  searchParams: Promise<{ statut?: string; recherche?: string }>;
 }) {
   const enTetes = await headers();
 
@@ -133,21 +136,27 @@ export default async function PageMessages({
     (filtre) => filtre.valeur === parametres.statut,
   );
   const filtreActif = filtreDemande ?? FILTRES[0]!;
+  const recherche = lireTermeRecherche(parametres.recherche);
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <Link
-        href="/administration/commandes"
-        className={styles.retour}
-        prefetch={false}
-      >
-        Retour aux commandes
-      </Link>
-
       <h1 className={styles.titre}>Messages</h1>
 
+      <RechercheListe
+        chemin="/administration/messages"
+        libelle="Chercher un message"
+        exemple="Nom, email ou mot du message"
+        terme={recherche}
+        conserver={{
+          statut:
+            filtreActif.valeur === FILTRES[0]!.valeur
+              ? undefined
+              : filtreActif.valeur,
+        }}
+      />
+
       <Suspense fallback={<ChargementMessages />}>
-        <ListeMessages filtreActif={filtreActif} />
+        <ListeMessages filtreActif={filtreActif} recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -183,8 +192,10 @@ function ChargementMessages() {
  */
 async function ListeMessages({
   filtreActif,
+  recherche,
 }: {
   filtreActif: (typeof FILTRES)[number];
+  recherche: string;
 }) {
   const vueArchives = filtreActif.valeur === "ARCHIVES";
   const { messages, tronquee, total, nouveaux, archives } =
@@ -194,6 +205,7 @@ async function ListeMessages({
         ? undefined
         : filtreActif.valeur,
       vueArchives,
+      recherche,
     );
 
   return (
@@ -323,9 +335,11 @@ async function ListeMessages({
            * total GENERAL, jamais celui du filtre, et deux nombres coexistent a
            * l'ecran. Le dire evite de lire l'un pour l'autre.
            */}
-          {total === 0 && archives === 0
-            ? "Les demandes envoyées par le formulaire de contact du site arrivent ici. Elles sont conservées même si l'email de notification n'est pas parti."
-            : `Aucun message dans « ${filtreActif.libelle} ». La boîte en compte ${total} en cours et ${archives} archivé${archives > 1 ? "s" : ""}.`}
+          {recherche !== ""
+            ? "Aucun message ne correspond à cette recherche."
+            : total === 0 && archives === 0
+              ? "Les demandes envoyées par le formulaire de contact du site arrivent ici. Elles sont conservées même si l'email de notification n'est pas parti."
+              : `Aucun message dans « ${filtreActif.libelle} ». La boîte en compte ${total} en cours et ${archives} archivé${archives > 1 ? "s" : ""}.`}
         </p>
       ) : (
         <ul className={styles.listeMessages}>
@@ -419,7 +433,15 @@ async function ListeMessages({
                * seule : un nom accessible est exige sur tout controle,
                * `frontend-design.md`.
                */}
-              <details className={styles.detail}>
+              {/*
+               * UN MESSAGE COURT SE LIT SANS CLIC, refonte du 22 novembre
+               * 2026 : la plupart tiennent en deux lignes. Le pli reste pour
+               * les longs, au-delà de 280 caractères.
+               */}
+              <details
+                className={styles.detail}
+                open={message.corps.length <= 280 ? true : undefined}
+              >
                 <summary className={styles.resume}>Lire le message</summary>
                 {/*
                  * `white-space: pre-wrap` PRESERVE LES RETOURS A LA LIGNE que la

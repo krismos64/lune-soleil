@@ -81,10 +81,20 @@ export async function listerMessagesEnBase(
   statut?: StatutMessage,
   /** LS-243 : `true` lit les SEULS archives, `false` les seuls non archives. */
   archives = false,
+  /** Nom, email, sujet ou mot du message, refonte du 22 novembre 2026. */
+  recherche = "",
 ): Promise<MessageEnListe[]> {
+  const terme = recherche.trim();
   return client.message.findMany({
     where: {
       ...(statut === undefined ? {} : { statut }),
+      ...(terme === ""
+        ? {}
+        : {
+            OR: (["nom", "email", "sujet", "corps"] as const).map((champ) => ({
+              [champ]: { contains: terme, mode: "insensitive" as const },
+            })),
+          }),
       // LS-243 : les archives ne se lisent que sur demande explicite.
       archiveA: archives ? { not: null } : null,
     },

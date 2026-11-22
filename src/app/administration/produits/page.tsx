@@ -21,6 +21,9 @@ import { Suspense } from "react";
 import { ChargementAdministration } from "@/components/chargement-administration";
 
 import Link from "next/link";
+
+import { RechercheListe } from "@/components/recherche-liste";
+import { lireTermeRecherche } from "@/lib/recherche";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -117,7 +120,11 @@ const BADGES: Record<StatutProduit, { libelle: string; classe: string }> = {
 export default async function PageCatalogue({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string; retrait?: string }>;
+  searchParams: Promise<{
+    statut?: string;
+    retrait?: string;
+    recherche?: string;
+  }>;
 }) {
   try {
     await exigerAdministratrice(await headers());
@@ -138,6 +145,7 @@ export default async function PageCatalogue({
   const filtreActif =
     FILTRES.find((filtre) => filtre.valeur === parametres.statut) ??
     FILTRE_PAR_DEFAUT;
+  const recherche = lireTermeRecherche(parametres.recherche);
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
@@ -164,6 +172,19 @@ export default async function PageCatalogue({
        * ce qui fait fonctionner le retour navigateur et le partage de lien,
        * exigence de `frontend-design.md`.
        */}
+      <RechercheListe
+        chemin="/administration/produits"
+        libelle="Chercher un produit"
+        exemple="Nom du produit ou de sa catégorie"
+        terme={recherche}
+        conserver={{
+          statut:
+            filtreActif.valeur === FILTRE_PAR_DEFAUT.valeur
+              ? undefined
+              : filtreActif.valeur,
+        }}
+      />
+
       <nav aria-label="Filtrer par état" className={styles.filtres}>
         <ul className={styles.listeFiltres}>
           {FILTRES.map((filtre) => {
@@ -204,7 +225,7 @@ export default async function PageCatalogue({
       {parametres.retrait === "1" ? <AnnonceRetrait /> : null}
 
       <Suspense fallback={<ChargementProduits />}>
-        <ListeProduits filtreActif={filtreActif} />
+        <ListeProduits filtreActif={filtreActif} recherche={recherche} />
       </Suspense>
     </main>
   );
@@ -244,8 +265,10 @@ function ChargementProduits() {
  */
 async function ListeProduits({
   filtreActif,
+  recherche,
 }: {
   filtreActif: (typeof FILTRES)[number];
+  recherche: string;
 }) {
   /*
    * LE COMPTE DES ARCHIVES N'EST LU QUE SUR LA VUE PAR DEFAUT, LS-247 : c'est la
@@ -253,7 +276,7 @@ async function ListeProduits({
    * tout, et la phrase qui suit la liste le rattrape.
    */
   const [produits, archivesMasques] = await Promise.all([
-    listerProduitsAdministration(filtreActif.statuts),
+    listerProduitsAdministration(filtreActif.statuts, recherche),
     filtreActif.valeur === "TOUS" ? compterProduitsArchives() : 0,
   ]);
 
@@ -313,11 +336,13 @@ async function ListeProduits({
          * la vue contient.
          */
         <p className={styles.vide}>
-          {filtreActif.valeur !== "TOUS"
-            ? "Aucun produit ne correspond à ce filtre."
-            : archivesMasques > 0
-              ? "Aucun produit publié ni brouillon."
-              : "Le catalogue est vide. Créez un premier produit pour commencer."}
+          {recherche !== ""
+            ? "Aucun produit ne correspond à cette recherche."
+            : filtreActif.valeur !== "TOUS"
+              ? "Aucun produit ne correspond à ce filtre."
+              : archivesMasques > 0
+                ? "Aucun produit publié ni brouillon."
+                : "Le catalogue est vide. Créez un premier produit pour commencer."}
         </p>
       ) : (
         <>
