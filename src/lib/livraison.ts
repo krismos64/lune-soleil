@@ -83,10 +83,44 @@ export const MODES_AVEC_POINT_RETRAIT = [
  * suspendant la vente, jamais en allongeant ce délai.
  *
  * SOURCE UNIQUE DE TOUT AFFICHAGE : un délai annoncé et non tenu est une
- * pratique commerciale trompeuse. Le délai d'acheminement du transporteur n'en
- * fait pas partie et n'est annoncé nulle part.
+ * pratique commerciale trompeuse. Le délai d'acheminement du transporteur s'y
+ * ajoute, il vit dans `DELAI_ACHEMINEMENT_JOURS_OUVRES`.
  */
 export const DELAI_EXPEDITION_JOURS_MAX = 2;
+
+/** Une fourchette de jours, bornes comprises. */
+export type FourchetteJours = { readonly min: number; readonly max: number };
+
+/**
+ * Délai d'acheminement de Mondial Relay par mode, en JOURS OUVRÉS, du dépôt du
+ * colis à sa remise. LS-334.
+ *
+ * LES VALEURS VIENNENT D'ADR-035, section « Le délai du domicile est annoncé ».
+ * L'unité est l'arbitrage de Christophe du 22 novembre 2026 : jours ouvrés, du
+ * lundi au vendredi dans le balisage.
+ *
+ * LE POINT DE RETRAIT EST MESURÉ, LE DOMICILE NE L'EST PAS. Les trois colis
+ * livrés au 22 novembre 2026, un Point Relais et deux Lockers, ont mis chacun
+ * trois jours ouvrés. Aucun colis n'avait encore été livré à domicile, et ni
+ * Mondial Relay ni Sendcloud ne publient de délai lisible : les 4 à 6 jours
+ * sont ceux d'ADR-035, gardés par arbitrage de Christophe le même jour, risque
+ * accepté. À remesurer sur les premières livraisons à domicile.
+ *
+ * LOCKER SUIT LE POINT RELAIS : même réseau, même tarif, ADR-025.
+ */
+export const DELAI_ACHEMINEMENT_JOURS_OUVRES: Readonly<
+  Record<ModeLivraison, FourchetteJours>
+> = {
+  POINT_RELAIS: { min: 2, max: 4 },
+  LOCKER: { min: 2, max: 4 },
+  DOMICILE: { min: 4, max: 6 },
+};
+
+/** « 2 à 4 jours ouvrés », la forme affichée au visiteur. */
+export function libelleDelaiAcheminement(mode: ModeLivraison): string {
+  const { min, max } = DELAI_ACHEMINEMENT_JOURS_OUVRES[mode];
+  return `${min} à ${max} jours ouvrés`;
+}
 
 /** `true` si ce mode impose de choisir un point de retrait. */
 export function exigePointRetrait(mode: ModeLivraison): boolean {

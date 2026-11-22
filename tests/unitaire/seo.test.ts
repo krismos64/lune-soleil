@@ -454,6 +454,55 @@ describe("jsonLdProduit", () => {
       }
     });
 
+    /*
+     * LS-334. LE DELAI BALISE EST CELUI QUE LE TUNNEL AFFICHE, ADR-035 :
+     * relais et domicile ont chacun le leur, en jours ouvres du lundi au
+     * vendredi, et la preparation suit le delai d'expedition de l'atelier.
+     */
+    it("annonce le delai de chaque mode en jours ouvres, ADR-035", () => {
+      const delais = (
+        (jsonLdProduit(produit)["offers"] as Offre)
+          .shippingDetails as unknown as {
+          deliveryTime: {
+            businessDays: { dayOfWeek: string[] };
+            handlingTime: {
+              minValue: number;
+              maxValue: number;
+              unitCode: string;
+            };
+            transitTime: {
+              minValue: number;
+              maxValue: number;
+              unitCode: string;
+            };
+          };
+        }[]
+      ).map((detail) => detail.deliveryTime);
+
+      expect(
+        delais.map((d) => [d.transitTime.minValue, d.transitTime.maxValue]),
+      ).toEqual([
+        [2, 4],
+        [4, 6],
+      ]);
+      for (const delai of delais) {
+        expect(delai.handlingTime).toEqual({
+          "@type": "QuantitativeValue",
+          minValue: 0,
+          maxValue: 2,
+          unitCode: "DAY",
+        });
+        expect(delai.transitTime.unitCode).toBe("DAY");
+        expect(delai.businessDays.dayOfWeek).toEqual([
+          "https://schema.org/Monday",
+          "https://schema.org/Tuesday",
+          "https://schema.org/Wednesday",
+          "https://schema.org/Thursday",
+          "https://schema.org/Friday",
+        ]);
+      }
+    });
+
     it("omet la livraison sur une configuration illisible, sans la deviner", () => {
       const offre = jsonLdProduit({ ...produit, livraison: null })[
         "offers"

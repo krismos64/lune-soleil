@@ -15,6 +15,8 @@ import {
   ConfigurationLivraisonInvalideError,
   calculerFraisPort,
   configurationDepuisParametres,
+  DELAI_ACHEMINEMENT_JOURS_OUVRES,
+  libelleDelaiAcheminement,
 } from "@/lib/livraison";
 
 /*
@@ -352,5 +354,25 @@ describe("MODES_SANS_POINT_RETRAIT", () => {
    */
   it("n'est jamais vide", () => {
     expect(MODES_SANS_POINT_RETRAIT.length).toBeGreaterThan(0);
+  });
+});
+
+/*
+ * LS-334, ADR-035. Le libelle est ce que le tunnel et l'aide affichent : il
+ * doit suivre la constante, et Locker suivre le Point Relais.
+ */
+describe("delai d'acheminement", () => {
+  it("annonce 2 a 4 jours ouvres en point de retrait, 4 a 6 a domicile", () => {
+    expect(libelleDelaiAcheminement("POINT_RELAIS")).toBe("2 à 4 jours ouvrés");
+    expect(libelleDelaiAcheminement("LOCKER")).toBe("2 à 4 jours ouvrés");
+    expect(libelleDelaiAcheminement("DOMICILE")).toBe("4 à 6 jours ouvrés");
+  });
+
+  it("porte des bornes entieres et ordonnees pour chaque mode", () => {
+    for (const { min, max } of Object.values(DELAI_ACHEMINEMENT_JOURS_OUVRES)) {
+      expect(Number.isInteger(min) && Number.isInteger(max)).toBe(true);
+      expect(min).toBeGreaterThan(0);
+      expect(max).toBeGreaterThanOrEqual(min);
+    }
   });
 });

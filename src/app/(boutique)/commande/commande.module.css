@@ -189,7 +189,25 @@
   font-size: 0.9375rem;
 }
 
+/*
+ * LE NOM PUIS LE DÉLAI, SUR DEUX LIGNES, LS-334 : le nom reste le repère du
+ * choix, le délai le précise en plus petit. `min-width: 0` laisse le texte se
+ * replier dans la boîte flexible au lieu de la faire déborder à 320 px.
+ */
+.modeTexte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-block: var(--ls-space-1);
+}
+
+.modeDelai {
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
 .radio {
+  flex-shrink: 0;
   width: 20px;
   height: 20px;
   accent-color: var(--ls-primary);

@@ -21,6 +21,8 @@
 import {
   calculerFraisPort,
   type ConfigurationLivraison,
+  DELAI_ACHEMINEMENT_JOURS_OUVRES,
+  DELAI_EXPEDITION_JOURS_MAX,
 } from "@/lib/livraison";
 import { DUREE_RETRACTATION_JOURS } from "@/lib/retractation";
 import type { EtatDisponibilite } from "@/services/catalogue";
@@ -431,7 +433,11 @@ const DESTINATION_FRANCE = {
  * diverge au premier changement de paramètres, et un port annoncé plus bas que
  * le port facturé est une information précontractuelle fausse.
  *
- * LOCKER N'A PAS DE BLOC PROPRE : même tarif que le relais, ADR-025.
+ * LOCKER N'A PAS DE BLOC PROPRE : même tarif et même délai que le relais,
+ * ADR-025.
+ *
+ * LE DÉLAI EST CELUI QUE LE TUNNEL AFFICHE, LS-334 : préparation de zéro à
+ * `DELAI_EXPEDITION_JOURS_MAX` jours, acheminement du mode en jours ouvrés.
  */
 function detailsDeLivraison(
   prixCentimes: number,
@@ -451,7 +457,51 @@ function detailsDeLivraison(
       currency: "EUR",
     },
     shippingDestination: DESTINATION_FRANCE,
+    deliveryTime: delaiDeLivraison(mode),
   }));
+}
+
+/** Du lundi au vendredi, les jours ouvrés de l'arbitrage du 22 novembre 2026. */
+const JOURS_OUVRES = [
+  "https://schema.org/Monday",
+  "https://schema.org/Tuesday",
+  "https://schema.org/Wednesday",
+  "https://schema.org/Thursday",
+  "https://schema.org/Friday",
+] as const;
+
+/**
+ * Le délai de livraison d'un mode, LS-334, au format attendu par Google :
+ * entiers, `unitCode` `DAY`, préparation et acheminement séparés.
+ *
+ * `businessDays` VAUT POUR LE DÉLAI ENTIER, et schema.org n'en porte qu'un. Le
+ * déclarer du lundi au vendredi allonge l'estimation quand l'atelier expédie
+ * aussi le week-end, jamais l'inverse : un délai annoncé plus court que le
+ * délai réel serait trompeur, un délai plus long ne l'est pas.
+ */
+function delaiDeLivraison(
+  mode: "POINT_RELAIS" | "DOMICILE",
+): Record<string, unknown> {
+  const acheminement = DELAI_ACHEMINEMENT_JOURS_OUVRES[mode];
+  return {
+    "@type": "ShippingDeliveryTime",
+    businessDays: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: JOURS_OUVRES,
+    },
+    handlingTime: {
+      "@type": "QuantitativeValue",
+      minValue: 0,
+      maxValue: DELAI_EXPEDITION_JOURS_MAX,
+      unitCode: "DAY",
+    },
+    transitTime: {
+      "@type": "QuantitativeValue",
+      minValue: acheminement.min,
+      maxValue: acheminement.max,
+      unitCode: "DAY",
+    },
+  };
 }
 
 /**
