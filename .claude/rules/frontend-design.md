@@ -1119,9 +1119,12 @@ Retenu :
 - toute architecture dimensionnée pour plusieurs milliers de références
 - aperçu rapide et ajout rapide complexes depuis la liste
 
-Une recherche interne simple, filtrage sur le nom et la description, reste
-**Could, jalon V1.x**. Quarante références se parcourent à l'œil, la recherche
-n'est pas le chemin d'accès principal.
+Une recherche interne simple est **livrée le 22 novembre 2026**, arbitrage de
+Christophe sans ticket : `BarreRecherche` du catalogue, formulaire `GET`,
+`?recherche=` validé par `lireTermeRecherche`, filtre SQL sans accent sur le
+nom, la présentation courte, la catégorie et les sections visibles. Une page
+de recherche est en `noindex, follow`. Aucun moteur externe, la ligne
+ci-dessus tient toujours.
 
 ## Fiche produit, ordre des blocs
 

@@ -1,0 +1,156 @@
+/*
+ * Barre de recherche du catalogue public, 22 novembre 2026. Jetons seulement.
+ *
+ * UNE PILULE BLANCHE QUI PORTE LA LOUPE, LE CHAMP ET LE BOUTON : le cadre est
+ * la limite du contrôle, C36, d'où `--ls-border-controle` (3,66:1 sur blanc,
+ * 3,07:1 sur sable). Le champ n'a pas de bordure propre, il remplit le cadre.
+ * Immobile, ADR-045 : seuls la couleur du cadre et son ombre répondent au
+ * focus.
+ */
+.recherche {
+  position: relative;
+  z-index: 1;
+  max-width: 36rem;
+  margin: 0 0 var(--ls-space-4);
+}
+
+.libelle {
+  display: block;
+  margin-bottom: var(--ls-space-2);
+  color: var(--ls-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cadre {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-1);
+  min-height: calc(var(--ls-touch-target) + 8px);
+  padding: 4px 4px 4px var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: 999px;
+  background: var(--ls-surface);
+  box-shadow: var(--ls-shadow-soft);
+  transition:
+    border-color var(--ls-duration-fast) var(--ls-easing),
+    box-shadow var(--ls-duration-fast) var(--ls-easing);
+}
+
+.cadre:hover {
+  border-color: var(--ls-primary);
+}
+
+/* Le focus se lit sur toute la pilule, le champ n'ayant pas de bord propre. */
+.cadre:focus-within {
+  border-color: var(--ls-primary);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--ls-accent-gold) 45%, transparent),
+    var(--ls-shadow-soft);
+}
+
+.loupe {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: var(--ls-accent-gold-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* @bordure-decorative la limite du contrôle est portée par la pilule, .cadre. */
+.champ {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-2);
+  border: 0;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: inherit;
+  /* 16 px : en dessous, Safari sur iPhone zoome la page au focus. */
+  font-size: 1rem;
+}
+
+.champ::placeholder {
+  color: var(--ls-text-muted);
+  opacity: 1;
+}
+
+/*
+ * Le contour du champ est remplacé par celui de la pilule, `:focus-within`
+ * ci-dessus : un second anneau à l'intérieur du premier brouillerait la lecture.
+ */
+.champ:focus-visible {
+  outline: none;
+}
+
+/* La croix native de Chrome double le lien « Effacer la recherche ». */
+.champ::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* @bordure-decorative le bouton porte son propre fond plein, qui l'identifie. */
+.bouton {
+  flex: none;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 0;
+  border-radius: 999px;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--ls-duration-fast) var(--ls-easing);
+}
+
+.bouton:hover {
+  background: var(--ls-primary-hover);
+}
+
+.rappel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--ls-space-3);
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+/* 44 px de cible : le lien d'effacement se touche du doigt. */
+.effacer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-1);
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.effacer svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.effacer:hover {
+  color: var(--ls-primary-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cadre,
+  .bouton {
+    transition: none;
+  }
+}
