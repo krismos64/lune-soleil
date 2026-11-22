@@ -20,9 +20,12 @@ export function BandeauApercuTheme({ theme }: { theme: ThemeSaisonnier }) {
       Aperçu de {LIBELLES_THEMES[theme]}, visible pour votre session seulement :
       il n&apos;est pas appliqué.{" "}
       <Link
-        href="/administration/parametres"
+        href="/administration/parametres?section=ambiance"
         className={styles.lien}
         prefetch={false}
+        // L'APERÇU S'AFFICHE AUSSI DANS LA FENÊTRE DES RÉGLAGES : le retour
+        // remplace la page entière, jamais le seul cadre.
+        target="_top"
       >
         Revenir aux paramètres
       </Link>

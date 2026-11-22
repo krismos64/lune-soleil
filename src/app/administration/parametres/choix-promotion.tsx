@@ -118,7 +118,7 @@ function ResumeActive({
           : `${pluriel(etat.reduites, "pièce réduite", "pièces réduites")} en ce moment`}
         {etat.exclues === 0
           ? "."
-          : `, ${pluriel(etat.exclues, "reste", "restent")} au prix catalogue : prix modifié dans les trente derniers jours.`}{" "}
+          : `, ${pluriel(etat.exclues, "reste", "restent")} hors réduction : prix à zéro.`}{" "}
         Les prix sont gelés tant qu&apos;elle est active. Pour changer un taux
         ou un article, désactivez-la puis activez-en une nouvelle.
       </p>
@@ -440,8 +440,7 @@ function FormulaireActivation({
         {tauxIncomplets === 0
           ? ""
           : ` ${pluriel(tauxIncomplets, "article coché n'a", "articles cochés n'ont")} pas encore de taux valide.`}{" "}
-        Une pièce dont le prix a changé dans les trente derniers jours reste au
-        prix catalogue.
+        Le prix barré affiché sera le prix catalogue actuel de chaque pièce.
       </p>
       <input type="hidden" name="action" value="ACTIVER" />
       <button
@@ -582,7 +581,7 @@ export function ChoixPromotion({
       {resultat?.statut === "REAUTHENTIFICATION_REQUISE" && (
         <p className={styles.sortie}>
           <Link
-            href="/administration/reauthentification?retour=parametres"
+            href="/administration/reauthentification?retour=promotion"
             prefetch={false}
             className={styles.lienSortie}
           >

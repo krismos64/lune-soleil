@@ -9,7 +9,7 @@
  * sa seule session.
  */
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { LIBELLES_THEMES, type ThemeSaisonnier } from "@/lib/theme-saisonnier";
 
@@ -46,17 +46,17 @@ const FAMILLES: readonly { titre: string; themes: readonly Choix[] }[] = [
     themes: [
       {
         valeur: "NOEL_1",
-        libelle: "Noël 1 (sobre)",
+        libelle: "Noël discret",
         repere: "décembre",
         description:
           "Fond blanc neige et accents rouges : boules suspendues, neige, rubans et papier cadeau. Textes et boutons gardent leurs couleurs.",
       },
       {
         valeur: "NOEL_2",
-        libelle: "Noël 2 (franc)",
+        libelle: "Noël festif",
         repere: "décembre",
         description:
-          "Bandeaux rouges à texte blanc, cartes encadrées de rouge, mêmes décors que Noël 1.",
+          "Bandeaux rouges à texte blanc, cartes encadrées de rouge, mêmes décors que Noël discret.",
       },
       {
         valeur: "NOUVEL_AN",
@@ -190,9 +190,11 @@ function messageDe(resultat: ResultatTheme | null): string {
 function CarteTheme({
   choix,
   applique,
+  onApercu,
 }: {
   choix: Choix;
   applique: ThemeSaisonnier;
+  onApercu: (choix: Choix) => void;
 }) {
   const id = `theme-${choix.valeur}`;
   return (
@@ -232,26 +234,14 @@ function CarteTheme({
           {choix.description}
         </p>
         {choix.valeur === "AUCUN" ? null : (
-          <p className={`${styles.aide} ${styles.descriptionTheme}`}>
-            Aperçu :{" "}
-            <Link
-              href={`/?apercu-theme=${choix.valeur}`}
-              className={styles.lienApercu}
-              prefetch={false}
-              aria-label={`l'accueil, aperçu du thème ${choix.libelle}`}
-            >
-              l&apos;accueil
-            </Link>{" "}
-            et{" "}
-            <Link
-              href={`/catalogue?apercu-theme=${choix.valeur}`}
-              className={styles.lienApercu}
-              prefetch={false}
-              aria-label={`le catalogue, aperçu du thème ${choix.libelle}`}
-            >
-              le catalogue
-            </Link>
-          </p>
+          <button
+            type="button"
+            className={styles.boutonApercu}
+            onClick={() => onApercu(choix)}
+            aria-label={`Aperçu de ${choix.libelle}`}
+          >
+            Aperçu
+          </button>
         )}
       </div>
     </li>
@@ -264,9 +254,12 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
     FormData
   >(choisirTheme, null);
   const applique = resultat?.statut === "SUCCES" ? resultat.theme : actif;
+  const formulaire = useRef<HTMLFormElement>(null);
+  const [apercu, setApercu] = useState<Choix | null>(null);
 
   return (
     <form
+      ref={formulaire}
       action={action}
       className={styles.formulaire}
       id="theme-saisonnier"
@@ -275,13 +268,16 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
       <fieldset className={styles.groupe} aria-describedby="theme-actif">
         <legend className={styles.legende}>Thème saisonnier</legend>
         <p id="theme-actif" className={styles.aide}>
-          Thème actif : <strong>{LIBELLES_THEMES[applique]}</strong>. Un thème
-          habille l&apos;accueil et le catalogue seulement, et aucun texte
-          n&apos;est à saisir.
+          Ambiance actuelle : <strong>{LIBELLES_THEMES[applique]}</strong>. Elle
+          habille l&apos;accueil et le catalogue.
         </p>
 
         <ul className={styles.themes}>
-          <CarteTheme choix={SANS_THEME} applique={applique} />
+          <CarteTheme
+            choix={SANS_THEME}
+            applique={applique}
+            onApercu={setApercu}
+          />
         </ul>
 
         {FAMILLES.map((famille, rang) => (
@@ -298,6 +294,7 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
                   key={choix.valeur}
                   choix={choix}
                   applique={applique}
+                  onApercu={setApercu}
                 />
               ))}
             </ul>
@@ -305,11 +302,22 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
         ))}
 
         <p className={styles.aide}>
-          Les aperçus s&apos;ouvrent pour votre session seulement : ils ne
-          changent rien pour les visiteurs tant que le thème n&apos;est pas
-          appliqué.
+          Les aperçus ne sont visibles que par vous : ils ne changent rien pour
+          les visiteurs tant que l&apos;ambiance n&apos;est pas appliquée.
         </p>
       </fieldset>
+
+      <ApercuTheme
+        choix={apercu}
+        onFermer={() => setApercu(null)}
+        onAppliquer={(valeur) => {
+          const caseTheme = formulaire.current?.querySelector<HTMLInputElement>(
+            `input[name="theme"][value="${valeur}"]`,
+          );
+          if (caseTheme) caseTheme.checked = true;
+          formulaire.current?.requestSubmit();
+        }}
+      />
 
       <p
         role="status"
@@ -323,5 +331,130 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
         Appliquer ce thème
       </button>
     </form>
+  );
+}
+
+/**
+ * L'APERÇU D'UNE AMBIANCE SANS QUITTER L'ÉCRAN, refonte du 22 novembre 2026 :
+ * la vraie page d'accueil ou du catalogue, habillée de l'ambiance, dans une
+ * fenêtre. Avant, chaque aperçu ouvrait la boutique à la place des Réglages,
+ * et comparer trois ambiances demandait trois allers et retours.
+ *
+ * L'IFRAME EST ADMISE PAR `frame-ancestors 'self'`, ADR-038 amendé : seul le
+ * site lui-même peut s'encadrer. L'aperçu reste réservé à la session de
+ * l'administratrice, `themeDeLaPage` l'ignorant pour tout autre visiteur.
+ *
+ * `<dialog>` NATIF, ouvert par `showModal()` : le focus y entre, Échap le
+ * ferme et le rend au bouton qui l'a ouvert, sans code d'accessibilité écrit à
+ * la main. « Appliquer » coche l'ambiance et soumet le formulaire de l'écran,
+ * la même action que le bouton du bas.
+ */
+function ApercuTheme({
+  choix,
+  onFermer,
+  onAppliquer,
+}: {
+  choix: Choix | null;
+  onFermer: () => void;
+  onAppliquer: (valeur: ThemeSaisonnier) => void;
+}) {
+  const fenetre = useRef<HTMLDialogElement>(null);
+  const [page, setPage] = useState<"accueil" | "catalogue">("accueil");
+  const [format, setFormat] = useState<"bureau" | "mobile">("bureau");
+
+  useEffect(() => {
+    const element = fenetre.current;
+    if (element === null) return;
+    if (choix !== null && !element.open) element.showModal();
+    if (choix === null && element.open) element.close();
+  }, [choix]);
+
+  const chemin =
+    choix === null
+      ? ""
+      : `${page === "accueil" ? "/" : "/catalogue"}?apercu-theme=${choix.valeur}`;
+
+  return (
+    <dialog
+      ref={fenetre}
+      className={styles.fenetreApercu}
+      aria-labelledby="titre-apercu"
+      onClose={onFermer}
+    >
+      {choix === null ? null : (
+        <div className={styles.corpsApercu}>
+          <div className={styles.enteteApercu}>
+            <h3 id="titre-apercu" className={styles.titreApercu}>
+              Aperçu : {choix.libelle}
+            </h3>
+            <button
+              type="button"
+              className={styles.boutonDiscret}
+              onClick={() => fenetre.current?.close()}
+            >
+              Fermer
+            </button>
+          </div>
+
+          <div className={styles.reglagesApercu}>
+            <div role="group" aria-label="Page montrée">
+              {(["accueil", "catalogue"] as const).map((valeur) => (
+                <button
+                  key={valeur}
+                  type="button"
+                  className={styles.pastilleChoix}
+                  aria-pressed={page === valeur}
+                  onClick={() => setPage(valeur)}
+                >
+                  {valeur === "accueil" ? "Accueil" : "Catalogue"}
+                </button>
+              ))}
+            </div>
+            <div role="group" aria-label="Largeur d'écran">
+              {(["bureau", "mobile"] as const).map((valeur) => (
+                <button
+                  key={valeur}
+                  type="button"
+                  className={styles.pastilleChoix}
+                  aria-pressed={format === valeur}
+                  onClick={() => setFormat(valeur)}
+                >
+                  {valeur === "bureau" ? "Ordinateur" : "Mobile"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <iframe
+            key={chemin}
+            src={chemin}
+            title={`Aperçu de ${choix.libelle}, ${page === "accueil" ? "page d'accueil" : "catalogue"}`}
+            className={styles.cadreApercu}
+            data-format={format}
+          />
+
+          <p className={styles.aide}>
+            Cet aperçu n&apos;est visible que par vous. La boutique ne change
+            qu&apos;après « Appliquer ».
+          </p>
+
+          <div className={styles.actionsApercu}>
+            <Link href={chemin} className={styles.lienApercu} prefetch={false}>
+              Ouvrir en grand
+            </Link>
+            <button
+              type="button"
+              className={styles.bouton}
+              onClick={() => {
+                onAppliquer(choix.valeur);
+                fenetre.current?.close();
+              }}
+            >
+              Appliquer cette ambiance
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
   );
 }

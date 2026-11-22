@@ -31,6 +31,7 @@ import {
 } from "@/services/promotion";
 import { Suspense } from "react";
 
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -80,7 +81,27 @@ function formaterJour(jour: string): string {
   }).format(new Date(`${jour}T00:00:00Z`));
 }
 
-export default async function PageParametres() {
+/**
+ * Les trois sections de l'écran, refonte du 22 novembre 2026. Une seule est
+ * rendue à la fois : quatre formulaires empilés sur une page faisaient
+ * chercher le bon. La section vient de l'adresse, `?section=…`, ce qui garde
+ * le bouton retour et le lien partagé ; une valeur inconnue retombe sur la
+ * livraison.
+ */
+const SECTIONS = ["livraison", "ambiance", "notifications"] as const;
+type Section = (typeof SECTIONS)[number];
+
+function sectionDe(valeur: string | undefined): Section {
+  return (SECTIONS as readonly string[]).includes(valeur ?? "")
+    ? (valeur as Section)
+    : "livraison";
+}
+
+export default async function PageParametres({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string }>;
+}) {
   const enTetes = await headers();
 
   try {
@@ -92,46 +113,27 @@ export default async function PageParametres() {
     throw erreur;
   }
 
+  const section = sectionDe((await searchParams).section);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Paramètres</h1>
 
-      {/*
-       * `<Suspense>` INTERNE ET JAMAIS UN `loading.tsx`, regle C32 : celui-ci
-       * envelopperait la page entiere dans une frontiere, et une lecture de
-       * base qui echoue rendrait 200 avec un chargement fige au lieu d'un vrai
-       * 500. La garde de role reste au-dessus, la redirection devant pouvoir se
-       * decider avant tout envoi.
-       */}
       <Suspense fallback={<ChargementParametres />}>
-        <Reglages />
+        <Reglages section={section} />
       </Suspense>
     </main>
   );
 }
 
-/** Armature affichee pendant que les parametres arrivent, LS-139. */
 function ChargementParametres() {
   return (
     <ChargementAdministration annonce="Chargement des paramètres…" lignes={4} />
   );
 }
 
-/** Les reglages, lus en base. */
-async function Reglages() {
-  /*
-   * L'ABSENCE DE LIGNE NE FAIT PAS TOMBER L'ECRAN, et c'est delibere. La
-   * migration l'amorce, ADR-043 : une ligne manquante signale une base
-   * restauree avant cette migration. Rendre 500 laisserait l'exploitante sans
-   * moyen de comprendre, alors que le message nomme la cause.
-   */
+async function Reglages({ section }: { section: Section }) {
   let parametres = null;
-  /*
-   * UNE LECTURE DE LA PROMOTION EN ÉCHEC NE FAIT PAS TOMBER L'ÉCRAN, revue
-   * d'interface de LS-319 : tarifs et thème restent réglables, le bloc de la
-   * promotion dit qu'il n'a pas pu se lire. Même principe que le thème, qui
-   * retombe sur l'habillage ordinaire.
-   */
   const [theme, promotion, periode, articles] = await Promise.all([
     lireThemeSaisonnier(),
     lireEtatPromotion().then(
@@ -153,100 +155,116 @@ async function Reglages() {
     }
   }
 
+  if (parametres === null) {
+    return (
+      <p className={styles.manquant}>
+        Aucun paramètre n&apos;est enregistré pour cette boutique. Cela signale
+        une base restaurée avant la migration qui les amorce. Rejouer les
+        migrations rétablit les valeurs de référence.
+      </p>
+    );
+  }
+
+  const alertesActives = [
+    parametres.alerteCommandePayee,
+    parametres.alertePaiementAnnule,
+    parametres.alerteStockFaible,
+    parametres.alerteMessageRecu,
+    parametres.alerteAvisAModerer,
+  ].filter(Boolean).length;
+
+  const entrees: {
+    section: Section;
+    icone: NomIcone;
+    titre: string;
+    etat: string;
+  }[] = [
+    {
+      section: "livraison",
+      icone: "expeditions",
+      titre: "Livraison",
+      etat: `Relais ${formaterMontant(parametres.tarifRelaisCentimes)}, domicile ${formaterMontant(parametres.tarifDomicileCentimes)}${
+        parametres.seuilFranchiseCentimes === null
+          ? ", aucune gratuité"
+          : parametres.seuilFranchiseCentimes === 0
+            ? ", relais toujours offert"
+            : `, relais offert dès ${formaterMontant(parametres.seuilFranchiseCentimes)}`
+      }`,
+    },
+    {
+      section: "ambiance",
+      icone: "theme",
+      titre: "Ambiance et promotion",
+      etat: `${theme === "AUCUN" ? "Aucune ambiance" : LIBELLES_THEMES[theme]}, ${
+        promotion === "INDISPONIBLE"
+          ? "promotion illisible pour le moment"
+          : promotion === null
+            ? "aucune promotion active"
+            : `promotion ${promotion.libelle}${
+                periode !== "INDISPONIBLE" && periode !== null
+                  ? ` du ${formaterJour(periode.debut)} au ${formaterJour(periode.fin)}`
+                  : ""
+              }`
+      }`,
+    },
+    {
+      section: "notifications",
+      icone: "alertes",
+      titre: "Notifications",
+      etat: `${alertesActives} sur 5 activées, vers ${parametres.emailAlertes}`,
+    },
+  ];
+
   return (
     <>
-      {parametres === null ? (
-        <p className={styles.manquant}>
-          Aucun paramètre n&apos;est enregistré pour cette boutique. Cela
-          signale une base restaurée avant la migration qui les amorce. Rejouer
-          les migrations rétablit les valeurs de référence.
-        </p>
-      ) : (
-        <>
-          {/*
-           * LE SOMMAIRE D'ÉTAT, LS-326 : ce que chaque réglage vaut en ce
-           * moment, et le lien qui y mène. L'exploitante lit l'état de la
-           * boutique sans parcourir cinq formulaires. Des ancres de la même
-           * page : aucun rechargement, donc des balises `<a>` ordinaires.
-           */}
-          <nav className={styles.sommaire} aria-label="Réglages de la boutique">
-            <ul className={styles.listeSommaire}>
-              {(
-                [
-                  {
-                    ancre: "#tarifs",
-                    icone: "expeditions",
-                    titre: "Livraison et alertes",
-                    etat: `Relais ${formaterMontant(parametres.tarifRelaisCentimes)}, domicile ${formaterMontant(parametres.tarifDomicileCentimes)}${
-                      parametres.seuilFranchiseCentimes === null
-                        ? ", aucune gratuité"
-                        : parametres.seuilFranchiseCentimes === 0
-                          ? ", relais toujours offert"
-                          : `, relais offert dès ${formaterMontant(parametres.seuilFranchiseCentimes)}`
-                    }`,
-                  },
-                  {
-                    ancre: "#theme-saisonnier",
-                    icone: "theme",
-                    titre: "Thème saisonnier",
-                    etat:
-                      theme === "AUCUN"
-                        ? "Habillage ordinaire"
-                        : `Actif : ${LIBELLES_THEMES[theme]}`,
-                  },
-                  {
-                    ancre: "#promotion",
-                    icone: "promotion",
-                    titre: "Promotion",
-                    etat:
-                      promotion === "INDISPONIBLE"
-                        ? "État illisible pour le moment"
-                        : promotion === null
-                          ? "Aucune promotion active"
-                          : `Active : ${promotion.libelle}`,
-                  },
-                  {
-                    ancre: "#periode-promotion",
-                    icone: "connexions",
-                    titre: "Période annoncée",
-                    etat:
-                      periode === "INDISPONIBLE"
-                        ? "État illisible pour le moment"
-                        : periode === null
-                          ? "Aucune date annoncée"
-                          : `Du ${formaterJour(periode.debut)} au ${formaterJour(periode.fin)}`,
-                  },
-                ] satisfies {
-                  ancre: string;
-                  icone: NomIcone;
-                  titre: string;
-                  etat: string;
-                }[]
-              ).map((entree) => (
-                <li key={entree.ancre}>
-                  <a href={entree.ancre} className={styles.entreeSommaire}>
-                    <span className={styles.iconeSommaire}>
-                      <IconeAdministration nom={entree.icone} />
-                    </span>
-                    <span className={styles.textesSommaire}>
-                      <span className={styles.titreSommaire}>
-                        {entree.titre}
-                      </span>
-                      <span className={styles.etatSommaire}>{entree.etat}</span>
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+      {/*
+       * LE SOMMAIRE EST LE CHOIX DE LA SECTION : chaque entrée dit l'état du
+       * réglage et l'ouvre. `aria-current` marque la section affichée.
+       */}
+      <nav className={styles.sommaire} aria-label="Réglages de la boutique">
+        <ul className={styles.listeSommaire}>
+          {entrees.map((entree) => (
+            <li key={entree.section}>
+              <Link
+                href={
+                  entree.section === "livraison"
+                    ? "/administration/parametres"
+                    : `/administration/parametres?section=${entree.section}`
+                }
+                className={styles.entreeSommaire}
+                aria-current={entree.section === section ? "page" : undefined}
+                prefetch={false}
+                scroll={false}
+              >
+                <span className={styles.iconeSommaire}>
+                  <IconeAdministration nom={entree.icone} />
+                </span>
+                <span className={styles.textesSommaire}>
+                  <span className={styles.titreSommaire}>{entree.titre}</span>
+                  <span className={styles.etatSommaire}>{entree.etat}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
+      {section === "livraison" ? (
+        <>
           <p className={styles.introduction}>
             Un tarif changé vaut pour les commandes <strong>à venir</strong> :
             une commande déjà passée garde le sien.
           </p>
+          <FormulaireParametres parametres={parametres} section="livraison" />
+        </>
+      ) : null}
 
-          <FormulaireParametres parametres={parametres} />
+      {section === "notifications" ? (
+        <FormulaireParametres parametres={parametres} section="notifications" />
+      ) : null}
 
+      {section === "ambiance" ? (
+        <>
           <ChoixTheme actif={theme} />
 
           <ChoixPromotion
@@ -264,50 +282,49 @@ async function Reglages() {
           <PeriodePromotion
             periode={periode === "INDISPONIBLE" ? null : periode}
           />
-
-          <section
-            className={styles.horsPerimetre}
-            aria-labelledby="titre-hors-perimetre"
-          >
-            <h2 id="titre-hors-perimetre" className={styles.titreSection}>
-              Ce qui ne se règle pas ici
-            </h2>
-
-            <dl className={styles.definitions}>
-              <div className={styles.definition}>
-                <dt>Le nom de la boutique</dt>
-                <dd>
-                  C&apos;est la marque. Le changer se décide, il ne se règle
-                  pas.
-                </dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Les modes de livraison</dt>
-                <dd>
-                  Point Relais, Locker et domicile. En ajouter un touche le
-                  tunnel de commande et le transporteur.
-                </dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>La gratuité au domicile</dt>
-                <dd>
-                  La livraison offerte vaut en Point Relais et Locker
-                  uniquement. Le domicile coûte plus cher qu&apos;une commande
-                  au seuil ne le finance.
-                </dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Les coordonnées légales</dt>
-                <dd>
-                  Dénomination, SIRET et adresse figurent sur chaque facture
-                  émise : elles se changent au déploiement, jamais en cours de
-                  vente.
-                </dd>
-              </div>
-            </dl>
-          </section>
         </>
-      )}
+      ) : null}
+
+      {/*
+       * CE QUI NE SE RÈGLE PAS ICI, replié sous « En savoir plus » : utile la
+       * première fois, encombrant ensuite. Le texte reste entier.
+       */}
+      <details className={styles.horsPerimetre}>
+        <summary className={styles.titreSection}>
+          En savoir plus : ce qui ne se règle pas ici
+        </summary>
+
+        <dl className={styles.definitions}>
+          <div className={styles.definition}>
+            <dt>Le nom de la boutique</dt>
+            <dd>
+              C&apos;est la marque. Le changer se décide, il ne se règle pas.
+            </dd>
+          </div>
+          <div className={styles.definition}>
+            <dt>Les modes de livraison</dt>
+            <dd>
+              Point Relais, Locker et domicile. En ajouter un touche le tunnel
+              de commande et le transporteur.
+            </dd>
+          </div>
+          <div className={styles.definition}>
+            <dt>La gratuité au domicile</dt>
+            <dd>
+              La livraison offerte vaut en Point Relais et Locker uniquement. Le
+              domicile coûte plus cher qu&apos;une commande au seuil ne le
+              finance.
+            </dd>
+          </div>
+          <div className={styles.definition}>
+            <dt>Les coordonnées légales</dt>
+            <dd>
+              Dénomination, SIRET et adresse figurent sur chaque facture émise :
+              elles se changent au déploiement, jamais en cours de vente.
+            </dd>
+          </div>
+        </dl>
+      </details>
     </>
   );
 }

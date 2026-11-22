@@ -7,6 +7,24 @@
 | Décideur | Christophe Mostefaoui |
 | Ticket | LS-139 |
 
+## Amendement du 22 novembre 2026, `frame-ancestors 'self'`
+
+**`frame-ancestors` passe de `'none'` à `'self'`**, refonte de
+l'administration, arbitrage de Christophe du 22 novembre 2026. L'écran
+Réglages montre l'aperçu d'une ambiance dans une fenêtre : la vraie page
+d'accueil ou du catalogue, habillée de l'ambiance, dans un `<iframe>`. Avant,
+chaque aperçu remplaçait l'administration par la boutique, et comparer trois
+ambiances demandait trois allers et retours.
+
+**Ce qui ne change pas** : aucune autre origine ne peut encadrer le site, donc
+la protection contre le clickjacking tient pour tout site tiers. `default-src
+'self'` couvre déjà `frame-src`, aucune directive n'est ajoutée.
+
+**Ce que l'ouverture admet** : une page du site peut en encadrer une autre.
+Seul l'écran Réglages le fait, et l'aperçu n'est honoré que pour la session de
+l'administratrice, `themeDeLaPage`. Le test `en-tetes-securite.spec.ts` exige
+`'self'` et refuse toute origine ou joker dans la directive.
+
 ## Décision
 
 Les cinq en-têtes de sécurité sont servis par **Nginx**, sauf la

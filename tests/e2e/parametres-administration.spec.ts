@@ -65,7 +65,20 @@ test.describe("écran connecté", () => {
     ).toBeVisible();
 
     await expect(page.getByRole("group", { name: "Livraison" })).toBeVisible();
-    await expect(page.getByRole("group", { name: "Alertes" })).toBeVisible();
+
+    /*
+     * TROIS SECTIONS DEPUIS LA REFONTE DU 22 NOVEMBRE 2026, une seule rendue à
+     * la fois : les notifications vivent sous leur entrée du sommaire.
+     */
+    await page
+      .getByRole("navigation", { name: "Réglages de la boutique" })
+      .getByRole("link", { name: /^Notifications/ })
+      .click();
+    await expect(page).toHaveURL(/section=notifications$/);
+    await expect(
+      page.getByRole("group", { name: "Notifications" }),
+    ).toBeVisible();
+    await expect(page.getByRole("group", { name: "Livraison" })).toHaveCount(0);
   });
 
   /*
@@ -119,11 +132,18 @@ test.describe("écran connecté", () => {
   test("l'écran nomme ce qui ne se règle pas ici", async ({ page }) => {
     await page.goto("/administration/parametres");
 
-    const section = page.locator("section", {
-      has: page.getByRole("heading", { name: "Ce qui ne se règle pas ici" }),
+    /*
+     * REPLIÉ SOUS « En savoir plus » depuis la refonte du 22 novembre 2026 :
+     * le texte reste entier, il s'ouvre d'un clic.
+     */
+    const section = page.locator("details", {
+      hasText: "En savoir plus : ce qui ne se règle pas ici",
     });
+    await section
+      .getByText("En savoir plus : ce qui ne se règle pas ici")
+      .click();
 
-    await expect(section).toBeVisible();
+    await expect(section.getByText("Le nom de la boutique")).toBeVisible();
 
     const texte = (await section.textContent()) ?? "";
 
@@ -170,7 +190,7 @@ test.describe("écran connecté", () => {
   test("la période annoncée se règle par deux dates, dans l'ordre", async ({
     page,
   }) => {
-    await page.goto("/administration/parametres");
+    await page.goto("/administration/parametres?section=ambiance");
     const formulaire = page.locator("#periode-promotion");
     const debut = formulaire.getByLabel("Premier jour");
     const fin = formulaire.getByLabel("Dernier jour");
@@ -208,7 +228,7 @@ test.describe("écran connecté", () => {
   test("la promotion se règle par article, et un taux hors bornes est refusé par le serveur", async ({
     page,
   }) => {
-    await page.goto("/administration/parametres");
+    await page.goto("/administration/parametres?section=ambiance");
     const formulaire = page.locator("#promotion");
     const etat = page.getByRole("status", { name: "État de la promotion" });
     const activer = formulaire.getByRole("button", {
@@ -295,21 +315,28 @@ test.describe("écran connecté", () => {
   });
 
   test("l'écran ne déborde pas horizontalement", async ({ page }) => {
-    await page.goto("/administration/parametres");
+    for (const section of ["", "?section=ambiance", "?section=notifications"]) {
+      await page.goto(`/administration/parametres${section}`);
 
-    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
-      TOLERANCE_DEBORDEMENT_PX,
-    );
+      expect(
+        await debordementHorizontal(page),
+        `section ${section || "livraison"}`,
+      ).toBeLessThanOrEqual(TOLERANCE_DEBORDEMENT_PX);
+    }
   });
 
   test("aucune violation d'accessibilité sur l'écran", async ({ page }) => {
-    await page.goto("/administration/parametres");
+    for (const section of ["", "?section=ambiance", "?section=notifications"]) {
+      await page.goto(`/administration/parametres${section}`);
 
-    const resultats = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
+      const resultats = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
 
-    expect(resultats.violations).toEqual([]);
+      expect(resultats.violations, `section ${section || "livraison"}`).toEqual(
+        [],
+      );
+    }
   });
 
   /*

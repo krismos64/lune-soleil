@@ -356,29 +356,48 @@ test.describe("aperçu de l'administratrice", () => {
   test("l'écran des paramètres propose les deux thèmes et leurs aperçus", async ({
     page,
   }) => {
-    await page.goto("/administration/parametres");
+    await page.goto("/administration/parametres?section=ambiance");
     const groupe = page.getByRole("group", { name: "Thème saisonnier" });
     await expect(
       groupe.getByRole("radio", { name: /Aucun thème/ }),
     ).toBeChecked();
     await expect(
-      groupe.getByRole("radio", { name: /Noël 1 \(sobre\)/ }),
+      groupe.getByRole("radio", { name: /Noël discret/ }),
     ).toBeVisible();
     await expect(
-      groupe.getByRole("radio", { name: /Noël 2 \(franc\)/ }),
+      groupe.getByRole("radio", { name: /Noël festif/ }),
     ).toBeVisible();
-    const liensAccueil = groupe.getByRole("link", { name: "l'accueil" });
-    // Un lien par thème hors « aucun » : les deux de Noël en tête, Black Week
-    // en dernier, LS-318, et les douze thèmes d'ambiance de LS-323.
-    await expect(liensAccueil).toHaveCount(15);
-    await expect(liensAccueil.nth(0)).toHaveAttribute(
-      "href",
+
+    /*
+     * UN APERÇU PAR AMBIANCE HORS « aucune » : les deux de Noël en tête,
+     * Black Week en dernier, LS-318, et les douze de LS-323. Depuis la refonte
+     * du 22 novembre 2026, il s'ouvre dans une fenêtre de l'écran, la vraie
+     * page encadrée, sans quitter les Réglages.
+     */
+    const apercus = groupe.getByRole("button", { name: /^Aperçu de / });
+    await expect(apercus).toHaveCount(15);
+    await apercus.nth(0).click();
+    const fenetre = page.getByRole("dialog", { name: "Aperçu : Noël discret" });
+    await expect(fenetre).toBeVisible();
+    await expect(fenetre.locator("iframe")).toHaveAttribute(
+      "src",
       accueil("NOEL_1"),
     );
-    await expect(liensAccueil.nth(1)).toHaveAttribute(
-      "href",
-      accueil("NOEL_2"),
+    await fenetre.getByRole("button", { name: "Catalogue" }).click();
+    await expect(fenetre.locator("iframe")).toHaveAttribute(
+      "src",
+      catalogue("NOEL_1"),
     );
+    await expect(
+      fenetre.getByRole("link", { name: "Ouvrir en grand" }),
+    ).toHaveAttribute("href", catalogue("NOEL_1"));
+    // L'aperçu se charge réellement dans la fenêtre, la CSP l'admettant.
+    await expect(
+      page.frameLocator("dialog iframe").getByRole("main"),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(fenetre).toBeHidden();
+    await expect(apercus.nth(0)).toBeFocused();
 
     // Réappliquer « aucun thème » ne change rien d'autre que le message :
     // c'est le retour au thème par défaut, sans toucher l'état partagé.

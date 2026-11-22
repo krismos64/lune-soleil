@@ -42,9 +42,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * il ne porte QUE sur les styles, jamais sur les scripts, et un attribut de
  * style n'execute rien.
  *
- * `frame-ancestors 'none'` remplace `X-Frame-Options`, qu'il rend inutile : la
- * boutique n'a aucune raison d'etre encadree par un autre site, et c'est la
- * defense contre le clickjacking.
+ * `frame-ancestors 'self'` remplace `X-Frame-Options`, qu'il rend inutile : AUCUN
+ * AUTRE SITE ne peut encadrer la boutique, et c'est la defense contre le
+ * clickjacking. Le site lui-meme le peut depuis la refonte de l'administration
+ * du 22 novembre 2026, ADR-038 amende : l'apercu d'une ambiance montre la vraie
+ * page d'accueil dans une fenetre de l'ecran Reglages. Il valait `'none'`.
  *
  * `object-src 'none'` ferme `<object>` et `<embed>`, qui n'ont aucun usage ici
  * et restent un vecteur d'execution.
@@ -74,7 +76,7 @@ function politique(nonce: string, developpement: boolean): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    "frame-ancestors 'self'",
     "upgrade-insecure-requests",
   ].join("; ");
 }

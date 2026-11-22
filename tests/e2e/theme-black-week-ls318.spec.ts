@@ -284,14 +284,18 @@ test.describe("aperçu de l'administratrice", () => {
   test("l'écran des paramètres propose Black Week et son aperçu", async ({
     page,
   }) => {
-    await page.goto("/administration/parametres");
+    await page.goto("/administration/parametres?section=ambiance");
     const groupe = page.getByRole("group", { name: "Thème saisonnier" });
     await expect(
       groupe.getByRole("radio", { name: /Black Week/ }),
     ).toBeVisible();
+    // L'aperçu s'ouvre dans une fenêtre depuis la refonte du 22 novembre 2026.
+    await groupe.getByRole("button", { name: "Aperçu de Black Week" }).click();
     await expect(
-      groupe.getByRole("link", { name: "l'accueil" }).last(),
-    ).toHaveAttribute("href", accueil);
+      page
+        .getByRole("dialog", { name: "Aperçu : Black Week" })
+        .locator("iframe"),
+    ).toHaveAttribute("src", accueil);
   });
 });
 
