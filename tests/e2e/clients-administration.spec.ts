@@ -87,6 +87,20 @@ function clientHostile(projet: string) {
   } as const;
 }
 
+/**
+ * Un acheteur SANS COMPTE, LS-335, un par largeur pour la même raison que le
+ * client hostile : les projets tournent en parallèle et se supprimeraient
+ * leurs fixtures. Une seule commande, sans `utilisateur_id`.
+ */
+function acheteurSansCompte(projet: string) {
+  return {
+    id: `e1a2b3c4-1335-4aaa-8888-00000000000${RANG_PROJET[projet] ?? 9}`,
+    numero: `C-TEST-335-${projet}`,
+    nom: "TEST Acheteur invité LS-335",
+    email: `invite-ls335-${projet}@exemple.invalid`,
+  } as const;
+}
+
 /** Un rang par largeur, pour composer un UUID distinct et fixe. */
 const RANG_PROJET: Record<string, number> = {
   "mobile-320": 1,
@@ -118,6 +132,20 @@ test.beforeAll(async ({}, infos) => {
        ON CONFLICT (id) DO NOTHING`,
       [hostile.id, hostile.email, hostile.nom],
     );
+
+    const invite = acheteurSansCompte(infos.project.name);
+    await client.query(
+      `INSERT INTO commande (
+         id, numero, email_normalise, nom_client, utilisateur_id, statut,
+         mode_livraison, adresse_livraison, adresse_facturation,
+         sous_total_centimes, frais_port_centimes, montant_taxe_centimes,
+         total_centimes, cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES ($1, $2, $3, $4, NULL, 'LIVREE', 'DOMICILE', '{}'::jsonb,
+               '{}'::jsonb, 1000, 410, 0, 1410, now(), 'test', now())
+       ON CONFLICT (id) DO NOTHING`,
+      [invite.id, invite.numero, invite.email, invite.nom],
+    );
   });
 });
 
@@ -126,6 +154,9 @@ test.afterAll(async ({}, infos) => {
 
   await avecClient(async (client) => {
     await client.query(`DELETE FROM utilisateur WHERE id = $1`, [hostile.id]);
+    await client.query(`DELETE FROM commande WHERE id = $1`, [
+      acheteurSansCompte(infos.project.name).id,
+    ]);
   });
 });
 
@@ -188,6 +219,37 @@ test.describe("sans le role", () => {
 
     await contexte.close();
   });
+
+  /*
+   * LS-335 : L'ONGLET « SANS COMPTE » EST DERRIÈRE LA MÊME GARDE, et ce test
+   * le prouve sur la RÉPONSE et non sur l'écran rendu : le corps HTTP ne porte
+   * pas l'adresse de l'acheteur, redirection suivie ou non. Un rendu qui
+   * enverrait la liste avant de rediriger aurait déjà tout divulgué.
+   */
+  for (const qui of ["anonyme", "client connecté"] as const) {
+    test(`l'onglet sans compte refuse un ${qui} sans qu'aucune adresse ne sorte`, async ({
+      browser,
+    }, infos) => {
+      const invite = acheteurSansCompte(infos.project.name);
+      const contexte = await browser.newContext({
+        ...(qui === "client connecté" ? { storageState: FICHIER_SESSION } : {}),
+        baseURL: test.info().project.use.baseURL ?? "",
+      });
+      const page = await contexte.newPage();
+
+      const brute = await page.request.get(`${ECRAN}?vue=sans-compte`, {
+        maxRedirects: 0,
+      });
+      expect(await brute.text()).not.toContain(invite.email);
+
+      await page.goto(`${ECRAN}?vue=sans-compte`);
+      await expect(page).toHaveURL(/\/administration\/connexion$/);
+      expect(await page.content()).not.toContain(invite.email);
+      await expect(page.getByText(invite.nom)).toHaveCount(0);
+
+      await contexte.close();
+    });
+  }
 });
 
 test.describe("connectee en administration", () => {
@@ -512,6 +574,63 @@ test.describe("connectee en administration", () => {
     expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
       TOLERANCE_DEBORDEMENT_PX,
     );
+  });
+
+  test("l'onglet sans compte liste l'acheteur et mène à ses commandes", async ({
+    page,
+  }, infos) => {
+    const invite = acheteurSansCompte(infos.project.name);
+
+    await page.goto(ECRAN);
+    await page.getByRole("link", { name: "Sans compte" }).click();
+
+    await expect(page).toHaveURL(/vue=sans-compte/);
+    await expect(
+      page.getByRole("link", { name: "Sans compte" }),
+    ).toHaveAttribute("aria-current", "page");
+
+    // Une adresse qui ne porte AUCUN compte n'apparaît pas dans l'autre onglet.
+    const carte = page.getByRole("listitem").filter({ hasText: invite.email });
+    await expect(carte).toHaveCount(1);
+    await expect(carte).toContainText(invite.nom);
+    await expect(carte).toContainText("Sans compte");
+    await expect(carte).toContainText("14,10");
+    await expect(
+      carte.getByRole("link", { name: "Voir sa commande" }),
+    ).toHaveAttribute(
+      "href",
+      `/administration/commandes?recherche=${encodeURIComponent(invite.email)}`,
+    );
+
+    // La recherche garde l'onglet, champ caché du formulaire.
+    await page.getByRole("searchbox").fill(invite.email);
+    await page.getByRole("button", { name: "Rechercher" }).click();
+    await expect(page).toHaveURL(/vue=sans-compte/);
+    await expect(
+      page.getByRole("listitem").filter({ hasText: invite.email }),
+    ).toHaveCount(1);
+
+    await page.getByRole("link", { name: "Avec compte" }).click();
+    await expect(
+      page.getByRole("listitem").filter({ hasText: invite.email }),
+    ).toHaveCount(0);
+  });
+
+  test("l'onglet sans compte ne deborde pas et ne porte aucune violation d'accessibilite", async ({
+    page,
+  }) => {
+    await page.goto(`${ECRAN}?vue=sans-compte`);
+    await expect(page.getByText("Sans compte").first()).toBeVisible();
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+
+    const resultat = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+
+    expect(resultat.violations).toEqual([]);
   });
 
   test("l'ecran ne deborde pas et ne porte aucune violation d'accessibilite", async ({
