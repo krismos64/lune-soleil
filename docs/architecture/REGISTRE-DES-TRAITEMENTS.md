@@ -472,13 +472,28 @@ demande.
 | Champ | Valeur |
 |---|---|
 | Finalité | **trois finalités distinctes**, arbitrage de Christophe du 5 septembre 2026 : répondre à une demande RGPD reçue par email, retrouver un acheteur qui contacte la boutique au sujet d'une commande, et suivre l'activité commerciale par client |
-| Personnes concernées | toute personne titulaire d'un compte client |
-| Catégories de données | nom, adresse email, date d'inscription, état de vérification, **nombre** d'adresses enregistrées, nombre et montant des commandes, date de dernière connexion réussie |
+| Personnes concernées | toute personne titulaire d'un compte client, et depuis LS-335 toute personne ayant **commandé sans compte**, hors commandes dissociées d'un compte supprimé |
+| Catégories de données | nom, adresse email, date d'inscription, état de vérification, **nombre** d'adresses enregistrées, nombre et montant des commandes, date de dernière connexion réussie. Pour un acheteur sans compte, LS-335 : nom de la commande la plus récente, adresse email, nombre et montant des commandes, date de la dernière commande |
 | Tables | aucune propre. Le traitement **consulte** `Utilisateur`, `AdresseCarnet`, `Commande` et `JournalConnexion`, couvertes par T1, T2, T3 et T8 |
 | Base légale | **deux bases**, une par famille de finalité : exécution du contrat, article 6.1.b, pour les deux premières ; intérêt légitime, article 6.1.f, pour le suivi d'activité commerciale |
 | Conservation | **aucune durée propre**, ce traitement n'écrit rien. Les durées sont celles des traitements consultés, trois ans après le dernier contact pour T1 et T2 |
 | Destinataires | l'exploitante seule, par l'écran d'administration |
 | Transfert hors UE | aucun |
+
+**Les acheteurs sans compte entrent dans ce traitement depuis LS-335**,
+arbitrage de Christophe du 22 novembre 2026 : onglet « Sans compte » de
+l'écran, une ligne par adresse email. Les trois finalités et les deux bases
+légales sont les mêmes, et les mêmes données sont tues, téléphone et adresse
+postale compris. Aucune table n'est ajoutée : l'onglet consulte `Commande`,
+couverte par T3, et sa durée de conservation. **Deux populations en sont
+exclues, chacune pour une raison** : une commande dissociée appartient à une
+personne qui a supprimé son compte, LS-95, et la faire réapparaître ici irait
+contre sa demande ; une adresse qui porte un compte figure déjà sur la carte
+de ce compte, LS-317. **Limite connue** : seules les commandes RATTACHÉES au compte
+supprimé sont dissociées ; un achat fait sans compte avec la même adresse et
+jamais rattaché reste listé. Étendre la dissociation touche l'accès à la
+facture par jeton et la portée de l'effacement, décision ouverte dans LS-336. La recherche libre de l'écran s'y applique, avec le même
+écart assumé à ADR-027 que plus bas.
 
 **Le téléphone et le contenu des adresses ne sont PAS affichés**, et cette ligne
 a été corrigée le 5 septembre 2026 avant la clôture de LS-185 : elle les

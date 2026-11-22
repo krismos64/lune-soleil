@@ -16,6 +16,7 @@ import Link from "next/link";
 
 import { RechercheListe } from "@/components/recherche-liste";
 import { lireTermeRecherche } from "@/lib/recherche";
+import { schemaEmailClient } from "@/lib/validation";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -66,7 +67,11 @@ const FILTRES: { valeur: StatutCommande | "TOUTES"; libelle: string }[] = [
 export default async function PageCommandes({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string; recherche?: string }>;
+  searchParams: Promise<{
+    statut?: string;
+    recherche?: string;
+    acheteur?: string;
+  }>;
 }) {
   const enTetes = await headers();
 
@@ -93,6 +98,17 @@ export default async function PageCommandes({
   const filtreActif = filtreDemande?.valeur ?? "TOUTES";
   const recherche = lireTermeRecherche(parametres.recherche);
 
+  /*
+   * LS-335 : L'ACHETEUR SANS COMPTE VIENT DE L'URL, validé par le schéma
+   * d'email du tunnel, invariant 7. Une valeur invalide est ignorée, la liste
+   * entière s'affiche : une adresse bricolée n'est pas une erreur. Il
+   * n'autorise rien, invariant 2, la garde de rôle est au-dessus.
+   */
+  const acheteurLu = schemaEmailClient.safeParse(parametres.acheteur);
+  const acheteur = acheteurLu.success
+    ? acheteurLu.data.trim().toLowerCase()
+    : undefined;
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Commandes</h1>
@@ -108,8 +124,22 @@ export default async function PageCommandes({
         terme={recherche}
         conserver={{
           statut: filtreActif === "TOUTES" ? undefined : filtreActif,
+          acheteur,
         }}
       />
+
+      {acheteur === undefined ? null : (
+        <p className={styles.acheteur}>
+          Commandes passées sans compte avec l&apos;adresse {acheteur}.{" "}
+          <Link
+            href="/administration/commandes"
+            prefetch={false}
+            className={styles.acheteurLien}
+          >
+            Afficher toutes les commandes
+          </Link>
+        </p>
+      )}
 
       <nav aria-label="Filtrer par statut" className={styles.filtres}>
         <ul className={styles.listeFiltres}>
@@ -123,6 +153,10 @@ export default async function PageCommandes({
                         recherche === ""
                           ? ""
                           : `&recherche=${encodeURIComponent(recherche)}`
+                      }${
+                        acheteur === undefined
+                          ? ""
+                          : `&acheteur=${encodeURIComponent(acheteur)}`
                       }`
                 }
                 className={styles.filtre}
@@ -139,7 +173,11 @@ export default async function PageCommandes({
       </nav>
 
       <Suspense fallback={<ChargementCommandes />}>
-        <ListeCommandes filtreActif={filtreActif} recherche={recherche} />
+        <ListeCommandes
+          filtreActif={filtreActif}
+          recherche={recherche}
+          acheteur={acheteur}
+        />
       </Suspense>
     </main>
   );
@@ -175,13 +213,17 @@ function ChargementCommandes() {
 async function ListeCommandes({
   filtreActif,
   recherche,
+  acheteur,
 }: {
   filtreActif: StatutCommande | "TOUTES";
   recherche: string;
+  /** LS-335, adresse validée d'un acheteur sans compte. */
+  acheteur: string | undefined;
 }) {
   const { commandes, tronquee } = await listerCommandes({
     ...(filtreActif === "TOUTES" ? {} : { statut: filtreActif }),
     recherche,
+    ...(acheteur === undefined ? {} : { acheteurSansCompte: acheteur }),
   });
 
   return (

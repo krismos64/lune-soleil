@@ -599,8 +599,19 @@ test.describe("connectee en administration", () => {
       carte.getByRole("link", { name: "Voir sa commande" }),
     ).toHaveAttribute(
       "href",
-      `/administration/commandes?recherche=${encodeURIComponent(invite.email)}`,
+      `/administration/commandes?acheteur=${encodeURIComponent(invite.email)}`,
     );
+
+    // Le lien mène aux seules commandes de cet acheteur, égalité stricte.
+    await carte.getByRole("link", { name: "Voir sa commande" }).click();
+    await expect(page).toHaveURL(/\/administration\/commandes\?acheteur=/);
+    await expect(page.getByText(invite.numero)).toBeVisible();
+    await expect(
+      page.getByText(
+        `Commandes passées sans compte avec l'adresse ${invite.email}.`,
+      ),
+    ).toBeVisible();
+    await page.goBack();
 
     // La recherche garde l'onglet, champ caché du formulaire.
     await page.getByRole("searchbox").fill(invite.email);

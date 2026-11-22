@@ -111,6 +111,7 @@ export const LIMITE_LISTE_COMMANDES = 100;
 export async function listerCommandes({
   statut,
   recherche,
+  acheteurSansCompte,
   limite = LIMITE_LISTE_COMMANDES,
   client = prisma,
 }: {
@@ -121,6 +122,13 @@ export async function listerCommandes({
    * `lireTermeRecherche`, déjà borné.
    */
   recherche?: string;
+  /**
+   * LS-335 : les commandes d'UN acheteur sans compte, en ÉGALITÉ STRICTE sur
+   * l'adresse, avec les mêmes exclusions que sa carte de l'écran Clients
+   * (sans compte, non dissociées). La recherche libre, par contenu, ramenait
+   * aussi `diana@x.fr` pour `ana@x.fr`. Adresse déjà validée par l'appelant.
+   */
+  acheteurSansCompte?: string;
   limite?: number;
   client?: typeof prisma;
 } = {}): Promise<ListeCommandes> {
@@ -128,6 +136,13 @@ export async function listerCommandes({
   const commandes = await client.commande.findMany({
     where: {
       ...(statut === undefined ? {} : { statut }),
+      ...(acheteurSansCompte === undefined
+        ? {}
+        : {
+            emailNormalise: acheteurSansCompte.trim().toLowerCase(),
+            utilisateurId: null,
+            dissocieA: null,
+          }),
       ...(terme === ""
         ? {}
         : {

@@ -749,6 +749,12 @@ export type AcheteurSansCompte = {
  *     la carte du compte, LS-317. La comparaison normalise l'adresse du compte
  *     comme le rattachement du parcours 6, `trim` puis minuscules.
  *
+ * LIMITE CONNUE, revue critique de LS-335 : la suppression d'un compte ne
+ * marque que ses commandes RATTACHÉES. Une commande passée sans compte avec
+ * la même adresse, jamais rattachée (adresse non confirmée), reste ici après
+ * la suppression. L'étendre au marquage touche l'accès à la facture par jeton
+ * et la portée du droit à l'effacement : décision ouverte dans LS-336.
+ *
  * LA RECHERCHE PORTE SUR TOUTES LES COMMANDES DU GROUPE, par `HAVING
  * bool_or` : chercher un ancien nom retrouve l'acheteur, et son compte de
  * commandes reste entier au lieu de se réduire à la ligne trouvée. Les jokers
