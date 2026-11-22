@@ -23,3 +23,30 @@ export function lireTermeRecherche(brut: unknown): string {
   const resultat = schemaTermeRecherche.safeParse(brut);
   return resultat.success ? resultat.data : "";
 }
+
+/** Nombre de mots retenus d'une recherche publique, au-delà ignorés. */
+export const MOTS_MAX_RECHERCHE = 5;
+
+/**
+ * Les mots d'une recherche du catalogue public, prêts pour un `LIKE`.
+ *
+ * SANS ACCENT ET EN MINUSCULES, comme la colonne que `texteSansAccent` du
+ * dépôt normalise : « boucle doree » trouve « Boucles dorées ». La ligature
+ * `œ` devient `oe` des deux côtés, la décomposition Unicode ne la séparant pas.
+ *
+ * LES JOKERS SONT ÉCHAPPÉS, `%`, `_` et la barre oblique inverse : un `%`
+ * saisi chercherait sinon tout le catalogue. La requête reste paramétrée,
+ * invariant 7, l'échappement ne servant qu'au sens du motif.
+ */
+export function motsDeRecherche(terme: string): string[] {
+  return terme
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
+    .split(/\s+/)
+    .filter((mot) => mot.length > 0)
+    .slice(0, MOTS_MAX_RECHERCHE)
+    .map((mot) => mot.replace(/[\\%_]/g, (car) => `\\${car}`));
+}

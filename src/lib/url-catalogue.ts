@@ -14,14 +14,21 @@ import { schemaNumeroPage } from "@/lib/validation";
 export function cheminCatalogue({
   categorie,
   page,
+  recherche,
 }: {
   categorie?: string | undefined;
   page?: number | undefined;
+  /** Le terme de la barre de recherche, conserve d'une page a l'autre. */
+  recherche?: string | undefined;
 }): string {
   const parametres = new URLSearchParams();
 
   if (categorie) {
     parametres.set("categorie", categorie);
+  }
+
+  if (recherche) {
+    parametres.set("recherche", recherche);
   }
 
   if (page !== undefined && page > 1) {

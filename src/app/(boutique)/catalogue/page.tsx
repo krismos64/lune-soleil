@@ -23,6 +23,7 @@ import { notFound } from "next/navigation";
 
 import { openGraphDePage } from "@/lib/seo";
 import { rangPhotoPrioritaire } from "@/lib/photo-prioritaire";
+import { lireTermeRecherche } from "@/lib/recherche";
 import { cheminCatalogue, lireNumeroPage } from "@/lib/url-catalogue";
 import {
   lireCataloguePublic,
@@ -32,6 +33,7 @@ import {
 import { MedaillonAube } from "@/components/medaillon-aube";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { ArmatureCatalogue } from "./armature-catalogue";
+import { BarreRecherche } from "./barre-recherche";
 import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
@@ -170,11 +172,25 @@ export async function generateMetadata({
     : "Bijoux artisanaux faits main, créés à l'unité. Chaque pièce est unique.";
   const chemin = cheminCatalogue({ categorie: categorie?.slug, page });
 
+  /*
+   * UNE RECHERCHE N'EST PAS INDEXÉE, 22 novembre 2026 : `noindex, follow`, et
+   * la canonical reste celle du catalogue sans terme. Une adresse par mot
+   * saisi fabriquerait des pages quasi vides et en double, que les moteurs
+   * traitent en contenu de faible qualité. `follow` laisse les fiches
+   * trouvées explorables.
+   */
+  const terme = lireTermeRecherche(
+    Array.isArray(parametres.recherche)
+      ? parametres.recherche[0]
+      : parametres.recherche,
+  );
+
   return {
-    title: titre,
+    title: terme ? `Recherche « ${terme} »` : titre,
     description,
     alternates: { canonical: chemin },
     openGraph: openGraphDePage({ titre, description, chemin }),
+    ...(terme ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -203,12 +219,15 @@ export const dynamic = "force-dynamic";
 async function ContenuCatalogue({
   slugCategorie,
   page,
+  recherche,
   noel,
   blackWeek,
   ambiance,
 }: {
   slugCategorie: string | undefined;
   page: number;
+  /** Le terme de la barre de recherche, vide sans recherche. */
+  recherche: string;
   noel: boolean;
   blackWeek: boolean;
   /** Thème d'ambiance de LS-323, `null` hors de ces thèmes. */
@@ -222,7 +241,7 @@ async function ContenuCatalogue({
   let catalogue: Awaited<ReturnType<typeof lireCataloguePublic>>;
 
   try {
-    catalogue = await lireCataloguePublic(slugCategorie, page);
+    catalogue = await lireCataloguePublic(slugCategorie, page, recherche);
   } catch (erreur) {
     if (erreur instanceof PageCatalogueInexistanteError) {
       notFound();
@@ -262,7 +281,7 @@ async function ContenuCatalogue({
           <ul className={styles.listeFiltres}>
             <li>
               <Link
-                href={cheminCatalogue({})}
+                href={cheminCatalogue({ recherche })}
                 className={styles.filtre}
                 aria-current={categorieRetenue === null ? "page" : undefined}
               >
@@ -279,7 +298,10 @@ async function ContenuCatalogue({
             {categories.map((categorie) => (
               <li key={categorie.id}>
                 <Link
-                  href={cheminCatalogue({ categorie: categorie.slug })}
+                  href={cheminCatalogue({
+                    categorie: categorie.slug,
+                    recherche,
+                  })}
                   className={styles.filtre}
                   aria-current={
                     categorieRetenue?.slug === categorie.slug
@@ -311,12 +333,16 @@ async function ContenuCatalogue({
        */}
       <p className={styles.compte} role="status" aria-live="polite">
         {produits.length === 0
-          ? nomCategorieRetenue
-            ? `Aucune pièce dans ${nomCategorieRetenue}.`
-            : "Aucune pièce à afficher."
+          ? recherche
+            ? `Aucune pièce ne correspond à « ${recherche} »${
+                nomCategorieRetenue ? ` dans ${nomCategorieRetenue}` : ""
+              }.`
+            : nomCategorieRetenue
+              ? `Aucune pièce dans ${nomCategorieRetenue}.`
+              : "Aucune pièce à afficher."
           : `${total} ${total === 1 ? "pièce" : "pièces"}${
-              nomCategorieRetenue ? ` dans ${nomCategorieRetenue}` : ""
-            }${
+              recherche ? ` pour « ${recherche} »` : ""
+            }${nomCategorieRetenue ? ` dans ${nomCategorieRetenue}` : ""}${
               pagination && pagination.pages > 1
                 ? `, page ${pagination.page} sur ${pagination.pages}`
                 : ""
@@ -335,7 +361,24 @@ async function ContenuCatalogue({
          * une fausse piste.
          */
         <div className={styles.etatVide}>
-          {categorieRetenue ? (
+          {recherche ? (
+            /*
+             * AUCUN RÉSULTAT DE RECHERCHE : l'action efface le terme en
+             * gardant la catégorie, et propose d'essayer un autre mot.
+             */
+            <>
+              <p className={styles.texteVide}>
+                Aucune pièce ne correspond à cette recherche. Essayez un autre
+                mot, une matière ou une couleur.
+              </p>
+              <Link
+                href={cheminCatalogue({ categorie: categorieRetenue?.slug })}
+                className={styles.actionVide}
+              >
+                Effacer la recherche
+              </Link>
+            </>
+          ) : categorieRetenue ? (
             <>
               <p className={styles.texteVide}>
                 Aucune pièce dans {nomCategorieRetenue ?? "cette catégorie"}{" "}
@@ -382,6 +425,7 @@ async function ContenuCatalogue({
             <Link
               href={cheminCatalogue({
                 categorie: categorieRetenue?.slug,
+                recherche,
                 page: pagination.page - 1,
               })}
               className={styles.lienPagination}
@@ -397,6 +441,7 @@ async function ContenuCatalogue({
             <Link
               href={cheminCatalogue({
                 categorie: categorieRetenue?.slug,
+                recherche,
                 page: pagination.page + 1,
               })}
               className={styles.lienPagination}
@@ -449,7 +494,20 @@ export default async function PageCatalogue({
    */
   const page = lireNumeroPage(parametres.page);
 
-  if (page === null || !(await pageCatalogueExiste(slugCategorie, page))) {
+  /*
+   * LE TERME DE RECHERCHE, validé par Zod, invariant 7 : un paramètre répété
+   * garde sa première valeur, comme la catégorie, et la longueur est bornée.
+   */
+  const recherche = lireTermeRecherche(
+    Array.isArray(parametres.recherche)
+      ? parametres.recherche[0]
+      : parametres.recherche,
+  );
+
+  if (
+    page === null ||
+    !(await pageCatalogueExiste(slugCategorie, page, recherche))
+  ) {
     notFound();
   }
 
@@ -597,10 +655,16 @@ export default async function PageCatalogue({
         {noel ? <MargesNeigeuses /> : null}
         {blackWeek ? <MargesDorees /> : null}
         {ambiance !== null ? <MargesSaison ambiance={ambiance} /> : null}
+        {/*
+         * DANS LA COQUE, AU-DESSUS DE LA FRONTIÈRE : la barre ne lit pas la
+         * base, elle s'affiche donc dès le premier octet, chargement compris.
+         */}
+        <BarreRecherche terme={recherche} slugCategorie={slugCategorie} />
         <Suspense fallback={<ArmatureCatalogue />}>
           <ContenuCatalogue
             slugCategorie={slugCategorie}
             page={page}
+            recherche={recherche}
             noel={noel}
             blackWeek={blackWeek}
             ambiance={ambiance}

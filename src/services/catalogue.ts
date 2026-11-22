@@ -25,6 +25,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { StatutProduit } from "@/generated/prisma/enums";
 import { journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
+import { motsDeRecherche } from "@/lib/recherche";
 import {
   schemaConfirmationNombre,
   schemaSelectionProduits,
@@ -1135,6 +1136,11 @@ export async function lireCataloguePublic(
   slugCategorie?: string,
   /** LS-241 : numero de page, a partir de 1, deja valide par l'appelant. */
   page?: number,
+  /**
+   * Le terme saisi dans la barre de recherche, deja passe par
+   * `lireTermeRecherche`. Vide, aucun filtre.
+   */
+  recherche: string = "",
 ): Promise<Catalogue> {
   const categories = await depot.listerCategoriesPubliees(prisma);
 
@@ -1148,7 +1154,11 @@ export async function lireCataloguePublic(
    * `{ categorieId?: string }`, et la distinction est utile ici, « aucun filtre »
    * et « filtre sur rien » n'ayant pas le meme sens pour la requete.
    */
-  const filtre = categorieRetenue ? { categorieId: categorieRetenue.id } : {};
+  const mots = motsDeRecherche(recherche);
+  const filtre = {
+    ...(categorieRetenue ? { categorieId: categorieRetenue.id } : {}),
+    ...(mots.length > 0 ? { recherche: mots } : {}),
+  };
 
   /*
    * LS-241 : LE COMPTE D'ABORD, pour refuser une page hors borne avant de lire
@@ -1249,6 +1259,7 @@ function prixDeCarte(
 export async function pageCatalogueExiste(
   slugCategorie: string | undefined,
   page: number,
+  recherche: string = "",
 ): Promise<boolean> {
   if (page === 1) {
     return true;
@@ -1257,10 +1268,11 @@ export async function pageCatalogueExiste(
   const categorieRetenue = slugCategorie
     ? await depot.lireCategorieParSlug(prisma, slugCategorie)
     : null;
-  const total = await depot.compterProduitsPublies(
-    prisma,
-    categorieRetenue ? { categorieId: categorieRetenue.id } : {},
-  );
+  const mots = motsDeRecherche(recherche);
+  const total = await depot.compterProduitsPublies(prisma, {
+    ...(categorieRetenue ? { categorieId: categorieRetenue.id } : {}),
+    ...(mots.length > 0 ? { recherche: mots } : {}),
+  });
 
   return page <= Math.ceil(total / PIECES_PAR_PAGE);
 }

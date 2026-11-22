@@ -473,10 +473,64 @@ export type ProduitCatalogue = {
  * 10 a 40 references, l'exclut explicitement, et `frontend-design.md` interdit
  * d'introduire un plafond que le schema ne porte pas.
  */
+/**
+ * Une colonne ramenée sans accent et en minuscules, pour la recherche du
+ * catalogue public. La même normalisation que `motsDeRecherche` côté Node :
+ * les deux côtés du `LIKE` doivent parler la même langue. `translate` plutôt
+ * que l'extension `unaccent`, qui demanderait une migration.
+ *
+ * LA COLONNE EST UNE CONSTANTE DU CODE, jamais une entrée : `Prisma.raw` ne
+ * reçoit ici que des noms écrits dans ce fichier.
+ */
+function texteSansAccent(colonne: string): Prisma.Sql {
+  return Prisma.raw(
+    `replace(replace(translate(lower(${colonne}), ` +
+      `'àáâãäåçèéêëìíîïñòóôõöùúûüýÿ', 'aaaaaaceeeeiiiinooooouuuuyy'), ` +
+      `'œ', 'oe'), 'æ', 'ae')`,
+  );
+}
+
+/**
+ * La condition de recherche du catalogue public : CHAQUE mot doit se trouver
+ * dans le nom, la présentation courte, la catégorie ou une section VISIBLE de
+ * la fiche. Une section masquée ne fait rien trouver, son texte n'étant pas
+ * publié. Les mots arrivent échappés par `motsDeRecherche`, et chaque motif
+ * part en paramètre, invariant 7.
+ */
+function conditionRecherche(mots: readonly string[] | undefined): Prisma.Sql {
+  if (!mots || mots.length === 0) {
+    return Prisma.empty;
+  }
+
+  return Prisma.join(
+    mots.map((mot) => {
+      const motif = `%${mot}%`;
+      return Prisma.sql`AND (
+        ${texteSansAccent("p.nom")} LIKE ${motif} ESCAPE '\\'
+        OR ${texteSansAccent("coalesce(p.description_courte, '')")} LIKE ${motif} ESCAPE '\\'
+        OR EXISTS (
+          SELECT 1 FROM categorie cr
+          WHERE cr.id = p.categorie_id
+            AND ${texteSansAccent("cr.nom")} LIKE ${motif} ESCAPE '\\'
+        )
+        OR EXISTS (
+          SELECT 1 FROM section_produit sr
+          WHERE sr.produit_id = p.id AND sr.visible
+            AND (${texteSansAccent("sr.titre")} LIKE ${motif} ESCAPE '\\'
+              OR ${texteSansAccent("sr.contenu")} LIKE ${motif} ESCAPE '\\')
+        )
+      )`;
+    }),
+    " ",
+  );
+}
+
 export async function listerProduitsPublies(
   client: ClientBase,
   filtre: {
     categorieId?: string;
+    /** Les mots d'une recherche, déjà normalisés par `motsDeRecherche`. */
+    recherche?: readonly string[];
     /**
      * LS-241 : une page du catalogue. Absente, tout est rendu, ce qu'attendent
      * le sitemap, `robots.ts` et l'accueil. `LIMIT` et `OFFSET` sont
@@ -537,6 +591,7 @@ export async function listerProduitsPublies(
     LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
     WHERE p.statut = 'ACTIF'
     ${conditionCategorie}
+    ${conditionRecherche(filtre.recherche)}
     GROUP BY p.id, p.nom, p.slug, p.categorie_id, c.nom, p.publie_a,
              p.modifie_a, m.chemin, m.texte_alternatif
     ORDER BY p.publie_a DESC NULLS LAST, p.nom ASC, p.id ASC
@@ -570,7 +625,7 @@ export async function listerProduitsPublies(
  */
 export async function compterProduitsPublies(
   client: ClientBase,
-  filtre: { categorieId?: string } = {},
+  filtre: { categorieId?: string; recherche?: readonly string[] } = {},
 ): Promise<number> {
   const conditionCategorie = filtre.categorieId
     ? Prisma.sql`AND p.categorie_id = ${filtre.categorieId}`
@@ -585,6 +640,7 @@ export async function compterProduitsPublies(
         WHERE v.produit_id = p.id AND v.archivee_a IS NULL
       )
     ${conditionCategorie}
+    ${conditionRecherche(filtre.recherche)}
   `;
 
   return Number(ligne?.total ?? 0);
