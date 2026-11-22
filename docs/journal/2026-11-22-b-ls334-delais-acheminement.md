@@ -74,13 +74,30 @@ constante.
 Une phrase non mesurée (« coupait le délai au milieu du chiffre ») est entrée
 dans un commentaire CSS, retirée avant le commit.
 
+## Mise en production, même jour
+
+PR #705 fusionnée en rebase, `da9665a`, image publiée, déployée par le workflow
+« Déployer en production », run 45035609779. Aucune migration.
+
+Contrôle en production :
+
+- JSON-LD de `boucles-d-oreilles-bonhommes-de-neige-pailletes` : `transitTime`
+  2 à 4 pour le relais (4,10 €), 4 à 6 pour le domicile (7,49 €),
+  `handlingTime` 0 à 2, `businessDays` du lundi au vendredi.
+- `/aide` : la phrase des deux délais est servie, page et FAQ.
+- Tunnel à 320 px, navigateur sans affichage, arrêté au choix du mode (les
+  étapes 1 à 3 n'écrivent que des cookies) : Point Relais et Locker « 2 à 4
+  jours ouvrés », domicile « 4 à 6 », débordement 0. C'est le premier rendu de
+  l'option Point Relais, qu'aucun test ne voit.
+
 ## Prochaine étape
 
-Fusion, déploiement, contrôle en production : JSON-LD d'une fiche, `/aide`, et
-l'option Point Relais au tunnel avec Sendcloud disponible.
+Search Console : « Valider la correction » sur l'alerte `deliveryTime`. LS-291,
+pistes 4 et 5, vers le 13 décembre. Remesurer le délai à domicile sur les
+premières livraisons.
 
 ## État des tickets
 
-- LS-334 : en cours jusqu'au contrôle en production.
+- LS-334 : terminée, déployée, contrôlée en production.
 - LS-291 : ouverte, pistes 4 et 5 vers le 13 décembre.
-- Ouverts dans Jira : LS-334, LS-291, LS-35.
+- Ouverts dans Jira : LS-291, LS-35.
