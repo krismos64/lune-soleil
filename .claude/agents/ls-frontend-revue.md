@@ -136,8 +136,8 @@ des pages publiques » de `frontend-design.md` :
   amendés par LS-268.
 
 **L'administration bouge aussi depuis LS-325 et LS-326**, dans un cadre plus
-étroit : une entrée orchestrée sur le tableau de bord (l'arc du jour), deux
-signes d'orientation par écran (l'icône du repère qui se trace, le trait du
+étroit (l'arc du jour du tableau de bord est retiré depuis la refonte du
+22 novembre 2026) : deux signes d'orientation par écran (l'icône du repère qui se trace, le trait du
 titre qui grandit), des réponses à un geste ; **aucune boucle**, puisqu'elle
 n'a pas de bouton de pause, rien pendant une saisie, les chiffres ne
 s'animent pas, et **un survol ne déplace jamais une ligne qui contient un
@@ -149,7 +149,7 @@ vérifier qu'un écran neuf ne pose ni police ni surtitre sur son `h1` (le
 layout et le repère d'écran le font), qu'il emploie `var(--ls-famille)` sans
 choisir de couleur, et qu'une ligne de travail dit son état par `data-etat`
 calculé dans `src/lib/ton-etat.ts`, **toujours doublé d'un badge écrit**.
-La palette « Aller à… » lit `RUBRIQUES` : une rubrique ajoutée y entre seule,
+La palette « Aller à… » lit `RUBRIQUES` et ses onglets : un écran ajouté y entre seul,
 avec son `icone`.
 
 Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et

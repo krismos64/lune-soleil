@@ -227,9 +227,9 @@ uniquement.
 
 **ADR-045 amende ce paragraphe** sur trois points, et le reste demeure :
 
-- le **dégradé de ciel** est permis dans onze décors seulement (le onzième,
-  LS-325, est l'en-tête du tableau de bord de l'administration, sans aucun
-  texte posé dessus), la scène
+- le **dégradé de ciel** est permis dans dix décors seulement (l'en-tête du
+  tableau de bord de l'administration, onzième ajouté par LS-325, est retiré
+  par la refonte du 22 novembre 2026), la scène
   du matin à la nuit, le fond du menu mobile plein écran, depuis
   l'amendement du 4 octobre 2026, LS-268, le panneau des portes d'entrée de la
   boutique et l'en-tête du contact, depuis celui du 7 octobre 2026, LS-280,
@@ -243,8 +243,8 @@ uniquement.
 - la **suranimation** se définit par le tableau d'intensité d'ADR-045 : riche
   sur les pages vitrines, retenue sur la fiche produit, micro-interactions
   seulement sur les pages d'action. **L'administration**, amendement de
-  LS-325 : une entrée orchestrée sur le tableau de bord seulement (l'arc du
-  jour), des réponses à un geste ailleurs, **aucune boucle** puisqu'elle n'a
+  LS-325 : des réponses à un geste (l'arc du jour du tableau de bord est
+  retiré par la refonte du 22 novembre 2026), **aucune boucle** puisqu'elle n'a
   pas de bouton de pause, et toujours rien pendant une saisie ; les chiffres
   ne s'animent pas. Depuis LS-326, chaque écran reçoit deux signes
   d'orientation courts, l'icône du repère qui se trace et le trait du titre
@@ -440,30 +440,39 @@ poser lui-même : la police et le trait de couleur de son `h1`, la couleur de
 sa famille, les rayons adoucis. Quatre points à connaître avant d'écrire un
 écran :
 
-- **Une couleur par famille de rubriques**, `--ls-famille`, prise dans les
-  jetons d'ADR-022 : vue d'ensemble, ventes, relation client, catalogue,
-  réglages. `RepereEcran` la pose par `data-famille`, le layout la remonte à
-  l'écran par `:has()`. Un écran l'emploie par `var(--ls-famille)`, il ne la
-  choisit jamais.
-- **Le repère d'écran du bandeau dit la famille et la rubrique** : un écran
-  n'écrit donc plus de surtitre au-dessus de son titre, il ferait doublon.
+- **Une couleur par rubrique**, `--ls-famille`, prise dans les jetons
+  existants et mesurée à 4,5:1 au moins avec le blanc dans
+  `layout.module.css` : sept depuis la refonte du 22 novembre 2026 (accueil,
+  commandes, retours, catalogue, clients, statistiques, réglages).
+  `RepereEcran` la pose par `data-famille`, le layout la remonte à l'écran par
+  `:has()`. Un écran l'emploie par `var(--ls-famille)`, il ne la choisit
+  jamais. La barre la reprend en puce teintée autour de chaque icône.
+- **Le repère d'écran du bandeau nomme la rubrique**, et les **onglets de la
+  rubrique**, `OngletsRubrique`, nomment l'écran : un écran n'écrit donc plus
+  de surtitre au-dessus de son titre, il ferait doublon.
+- **Une liste longue porte sa recherche**, `RechercheListe`, depuis la refonte
+  du 22 novembre 2026 : formulaire `GET`, terme dans `?recherche=`, validé par
+  `lireTermeRecherche`, filtres de la liste conservés. Une liste courte n'en
+  porte pas : catégories, réglages, statistiques.
 - **Une ligne de travail dit son état par `data-etat`**, quatre tons
   (`attente`, `cours`, `fait`, `ecarte`) calculés par `src/lib/ton-etat.ts`,
   que le layout traduit en un bord de couleur. **La couleur double le badge
   écrit, elle ne le remplace jamais.** Un statut neuf entre dans la table de
   ton, sans quoi la compilation échoue.
-- **Paramètres s'ouvre sur un sommaire d'état** : chaque réglage y écrit ce
-  qu'il vaut et mène à sa carte. Un réglage ajouté entre dans ce sommaire.
+- **Paramètres s'ouvre sur un sommaire d'état** qui choisit la section
+  affichée, `?section=` : Livraison, Ambiance et promotion, Notifications.
+  Chaque entrée écrit ce que vaut sa section. Un réglage ajouté entre dans
+  une section et dans son état.
 
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
 
-**Trois chemins mènent à une rubrique depuis LS-325**, et tous lisent la même
-table `RUBRIQUES` : la barre latérale, la palette « Aller à… »
+**Trois chemins mènent à un écran depuis LS-325**, et tous lisent la même
+table `RUBRIQUES` : la barre latérale et ses onglets, la palette « Aller à… »
 (`palette-administration.tsx`, bouton du bandeau, Ctrl+K ou Cmd+K), et les
-actions directes du tableau de bord (`actions-administration.ts`). **Une
-rubrique ajoutée à `RUBRIQUES` entre seule dans la palette** ; elle porte une
-icône, champ `icone`, toujours décorative. Les options de la palette ne sont
-pas des liens : elles ne doublent aucun lien de la barre, que les tests
+actions directes du tableau de bord (`actions-administration.ts`). **Un
+onglet ajouté à `RUBRIQUES` entre seul dans la palette** ; chaque rubrique
+porte une icône, champ `icone`, toujours décorative. Les options de la palette
+ne sont pas des liens : elles ne doublent aucun lien de la barre, que les tests
 désignent par leur nom.
 
 Une **barre permanente** porte les rubriques, posée par
@@ -472,11 +481,13 @@ s'affiche que pour une session au rôle `ADMINISTRATRICE` : la cacher n'est pas
 une protection, les pages restant gardées une par une, mais l'afficher
 divulguerait la structure de l'administration.
 
-**Les rubriques sont rangées en cinq groupes titrés** depuis LS-245 : Vue
-d'ensemble, Ventes, Relation client, Catalogue, Réglages. Une rubrique ajoutée
-choisit son groupe, champ `groupe` de `RUBRIQUES`, et **deux libellés
-identiques ne se suivent jamais** : c'est pourquoi le groupe Catalogue porte la
-rubrique « Produits » et le groupe des messages s'appelle « Relation client ».
+**Sept rubriques, et leurs écrans en onglets**, refonte du 22 novembre 2026,
+qui remplace les cinq groupes titrés de LS-245 : Accueil, Commandes, Retours
+et factures, Catalogue, Clients et avis, Statistiques, Réglages. Le lien d'une
+rubrique mène à son premier onglet ; `OngletsRubrique` rend les autres sous le
+bandeau, dans une navigation nommée par la rubrique. **Toutes les adresses
+restent celles des écrans**, un onglet n'étant qu'un lien. Un écran ajouté
+choisit sa rubrique et entre dans ses `onglets`.
 
 **Un écran ajouté entre dans la barre, ou son absence s'écrit.**
 `scripts/verifier-navigation-administration.sh` confronte les rubriques aux

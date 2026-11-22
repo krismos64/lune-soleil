@@ -115,7 +115,7 @@ production.** Les deux conditions sont indispensables :
 **Depuis LS-295, l'écran demande d'abord de confirmer son identité.** Le
 bouton « Confirmer mon identité » mène à la réauthentification ; sans passkey
 encore, elle choisit « Utiliser le mot de passe de secours », puis revient sur
-« Vos passkeys » pour enregistrer l'appareil. La confirmation vaut quinze
+Réglages, onglet « Appareils de connexion », pour enregistrer l'appareil. La confirmation vaut quinze
 minutes, et le retrait d'une passkey la demande aussi (ADR-027, décision 3).
 
 Cette étape ne se délègue pas et ne s'anticipe pas.
