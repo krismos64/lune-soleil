@@ -195,6 +195,28 @@ test("le transporteur indisponible laisse commander a domicile", async ({
   ).toBeVisible();
 });
 
+/*
+ * LS-334, ADR-035 : LE DELAI S'ANNONCE AVANT LE CHOIX, jamais apres la
+ * commande. Il decrit l'option sans entrer dans son nom, que les autres tests
+ * designent par « À domicile ». Le chiffre est ECRIT ICI : importer la
+ * constante ferait bouger le test avec elle.
+ */
+test("chaque mode annonce son delai d'acheminement avant le choix", async ({
+  page,
+}) => {
+  await page.goto("/commande");
+  await remplirCoordonnees(page);
+  await remplirAdresse(page);
+
+  const domicile = page.getByRole("radio", { name: "À domicile", exact: true });
+  await expect(domicile).toHaveAccessibleDescription(
+    "Livraison en 4 à 6 jours ouvrés après l'expédition",
+  );
+  await expect(
+    page.getByText("Livraison en 4 à 6 jours ouvrés après l'expédition"),
+  ).toBeVisible();
+});
+
 test("le recapitulatif porte le montant et la mention imposee", async ({
   page,
 }) => {
@@ -508,7 +530,7 @@ test("le parcours annonce chaque etape a un lecteur d'ecran", async ({
     - group "Mode de livraison":
       - text: Mode de livraison
       - radio "À domicile"
-      - text: À domicile
+      - text: À domicile Livraison en 4 à 6 jours ouvrés après l'expédition
     - button "Continuer" [disabled]
   `);
 
