@@ -28,7 +28,8 @@ import {
 test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 
 /**
- * Les rubriques attendues, avec le titre de l'ecran qu'elles atteignent.
+ * Les sept rubriques et leurs onglets, avec le titre de l'ecran que chaque
+ * onglet atteint, refonte du 22 novembre 2026.
  *
  * LA LISTE EST ECRITE ICI PLUTOT QU'IMPORTEE DU COMPOSANT, deliberement. Une
  * assertion qui lit la meme constante que le code verifie sa coherence avec
@@ -37,52 +38,54 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
  * son libelle l'annonce.
  */
 const RUBRIQUES = [
-  /*
-   * L'ORDRE EST CELUI DE LS-245, cinq groupes arretes le 23 septembre 2026.
-   * Le test de tabulation compare cet ordre a celui du rendu : ranger une
-   * rubrique hors de son groupe le fait echouer.
-   *
-   * CETTE LISTE EST UNE SECONDE LISTE, ecrite a la main en face de celle du
-   * composant, et `verifier-navigation-administration.sh` confronte les deux
-   * depuis LS-140 : une rubrique declaree dans le composant et absente d'ici
-   * fait echouer le controle.
-   */
   {
-    libelle: "Tableau de bord",
-    titre: "Tableau de bord",
-    groupe: "Vue d'ensemble",
-  },
-  { libelle: "Alertes", titre: "Alertes", groupe: "Vue d'ensemble" },
-  { libelle: "Statistiques", titre: "Statistiques", groupe: "Vue d'ensemble" },
-  { libelle: "Commandes", titre: "Commandes", groupe: "Ventes" },
-  { libelle: "Expéditions", titre: "Expéditions", groupe: "Ventes" },
-  { libelle: "Rétractations", titre: "Rétractations", groupe: "Ventes" },
-  {
-    libelle: "Factures et avoirs",
-    titre: "Factures et avoirs",
-    groupe: "Ventes",
-  },
-  { libelle: "Messages", titre: "Messages", groupe: "Relation client" },
-  { libelle: "Avis", titre: "Avis", groupe: "Relation client" },
-  { libelle: "Clients", titre: "Clients", groupe: "Relation client" },
-  /* LS-245 : « Catalogue » devient « Produits », le groupe portant ce nom. */
-  { libelle: "Produits", titre: "Produits", groupe: "Catalogue" },
-  {
-    libelle: "Catégories",
-    titre: "Catégories du catalogue",
-    groupe: "Catalogue",
+    libelle: "Accueil",
+    onglets: [
+      { libelle: "Aujourd'hui", titre: "Tableau de bord" },
+      { libelle: "Alertes", titre: "Alertes" },
+    ],
   },
   {
-    libelle: "Stocks et marchés",
-    titre: "Stocks et marchés",
-    groupe: "Catalogue",
+    libelle: "Commandes",
+    onglets: [
+      { libelle: "Commandes", titre: "Commandes" },
+      { libelle: "Expéditions", titre: "Expéditions" },
+    ],
   },
-  { libelle: "Paramètres", titre: "Paramètres", groupe: "Réglages" },
-  { libelle: "Vos passkeys", titre: "Vos passkeys", groupe: "Réglages" },
   {
-    libelle: "Connexions",
-    titre: "Journal des connexions",
-    groupe: "Réglages",
+    libelle: "Retours et factures",
+    onglets: [
+      { libelle: "Retours", titre: "Rétractations" },
+      { libelle: "Factures et avoirs", titre: "Factures et avoirs" },
+    ],
+  },
+  {
+    libelle: "Catalogue",
+    onglets: [
+      { libelle: "Produits", titre: "Produits" },
+      { libelle: "Catégories", titre: "Catégories du catalogue" },
+      { libelle: "Stock et marchés", titre: "Stocks et marchés" },
+    ],
+  },
+  {
+    libelle: "Clients et avis",
+    onglets: [
+      { libelle: "Messages", titre: "Messages" },
+      { libelle: "Avis", titre: "Avis" },
+      { libelle: "Comptes clients", titre: "Clients" },
+    ],
+  },
+  {
+    libelle: "Statistiques",
+    onglets: [{ libelle: "Statistiques", titre: "Statistiques" }],
+  },
+  {
+    libelle: "Réglages",
+    onglets: [
+      { libelle: "Paramètres", titre: "Paramètres" },
+      { libelle: "Appareils de connexion", titre: "Appareils de connexion" },
+      { libelle: "Connexions", titre: "Journal des connexions" },
+    ],
   },
 ] as const;
 
@@ -124,42 +127,32 @@ test("chaque écran est atteignable au clic depuis l'accueil", async ({
   await page.goto("/administration");
 
   for (const rubrique of RUBRIQUES) {
-    /*
-     * LE PANNEAU SE REFERME APRES CHAQUE CLIC sous 768 px, et c'est voulu :
-     * laisser un menu ouvert par-dessus l'ecran qu'on vient d'atteindre
-     * obligerait a le fermer a la main a chaque navigation. Il faut donc le
-     * rouvrir a chaque tour, exactement comme l'exploitante le fait.
-     */
-    await ouvrirLaBarreSiRepliee(page);
+    for (const onglet of rubrique.onglets) {
+      await ouvrirLaBarreSiRepliee(page);
 
-    await page
-      .getByRole("navigation", { name: "Sections de l'administration" })
+      await page
+        .getByRole("navigation", { name: "Sections de l'administration" })
+        .getByRole("link", { name: new RegExp(`^${rubrique.libelle}`) })
+        .click();
+
       /*
-       * LE LIEN SE CIBLE PAR LE DEBUT DE SON NOM, jamais par egalite stricte.
-       * Une rubrique a pastille porte son compteur DANS son nom accessible,
-       * « Commandes 3 (3 en attente) » : c'est voulu, un lecteur d'ecran doit
-       * entendre ce qui attend. Une egalite stricte ne trouverait alors que
-       * les rubriques sans pastille, et le test verdirait sur la moitie de la
-       * barre en silence.
+       * UNE RUBRIQUE À PLUSIEURS ÉCRANS S'OUVRE SUR LE PREMIER, et les autres
+       * s'atteignent par ses onglets, nommés d'après la rubrique.
        */
-      .getByRole("link", { name: new RegExp(`^${rubrique.libelle}`) })
-      .click();
+      if (rubrique.onglets.length > 1) {
+        await page
+          .getByRole("navigation", { name: rubrique.libelle, exact: true })
+          .getByRole("link", { name: new RegExp(`^${onglet.libelle}`) })
+          .click();
+      }
 
-    await expect(
-      page.getByRole("heading", { name: rubrique.titre, level: 1 }),
-    ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: onglet.titre, level: 1 }),
+      ).toBeVisible();
+    }
   }
 });
 
-/**
- * L'ECRAN COURANT EST ANNONCE, critere 3.
- *
- * `aria-current="page"` PORTE L'INFORMATION et la couleur ne fait que
- * l'appuyer, `frontend-design.md` interdisant qu'une information passe par la
- * seule couleur. L'assertion vise donc l'attribut, jamais une classe ni une
- * couleur calculee : un test sur l'apparence resterait vert sur une barre
- * devenue muette pour un lecteur d'ecran.
- */
 test("la rubrique de l'écran ouvert est annoncée comme courante", async ({
   page,
 }) => {
@@ -170,9 +163,19 @@ test("la rubrique de l'écran ouvert est annoncée comme courante", async ({
     name: "Sections de l'administration",
   });
 
+  await expect(barre.getByRole("link", { name: /^Catalogue/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  const onglets = page.getByRole("navigation", {
+    name: "Catalogue",
+    exact: true,
+  });
   await expect(
-    barre.getByRole("link", { name: /^Stocks et marchés/ }),
+    onglets.getByRole("link", { name: /^Stock et marchés/ }),
   ).toHaveAttribute("aria-current", "page");
+  await expect(onglets.locator('[aria-current="page"]')).toHaveCount(1);
 
   /*
    * ET UNE SEULE A LA FOIS. Sans cette seconde assertion, une barre qui
@@ -262,7 +265,7 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
   await page.goto("/administration/commandes");
   await ouvrirLaBarreSiRepliee(page);
 
-  const libelles = RUBRIQUES.map((rubrique) => rubrique.libelle);
+  const libelles: string[] = RUBRIQUES.map((rubrique) => rubrique.libelle);
   const rencontres: string[] = [];
 
   /*
@@ -301,34 +304,32 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
 });
 
 /*
- * LS-245 : CHAQUE GROUPE EST UNE LISTE NOMMEE PAR SON TITRE. Un titre pose a
- * cote d'une liste sans `aria-labelledby` se verrait a l'oeil et resterait muet
- * pour un lecteur d'ecran ; ce test lit l'arbre d'accessibilite, pas le DOM.
+ * CHAQUE RUBRIQUE À PLUSIEURS ÉCRANS PORTE SES ONGLETS, dans l'ordre, dans une
+ * navigation nommée par la rubrique. Ce test lit l'arbre d'accessibilité : un
+ * onglet visible et sans nom resterait muet pour un lecteur d'écran.
  */
-test("les rubriques sont rangées dans des listes nommées par leur groupe", async ({
-  page,
-}) => {
-  await page.goto("/administration");
-  await ouvrirLaBarreSiRepliee(page);
+test("chaque rubrique porte ses onglets, dans l'ordre", async ({ page }) => {
+  for (const rubrique of RUBRIQUES.filter((r) => r.onglets.length > 1)) {
+    await page.goto("/administration");
+    await ouvrirLaBarreSiRepliee(page);
+    await page
+      .getByRole("navigation", { name: "Sections de l'administration" })
+      .getByRole("link", { name: new RegExp(`^${rubrique.libelle}`) })
+      .click();
 
-  const barre = page.getByRole("navigation", {
-    name: "Sections de l'administration",
-  });
-  const groupes = [...new Set(RUBRIQUES.map((rubrique) => rubrique.groupe))];
+    const onglets = page
+      .getByRole("navigation", { name: rubrique.libelle, exact: true })
+      .getByRole("link");
 
-  for (const groupe of groupes) {
-    const liste = barre.getByRole("list", { name: groupe, exact: true });
-    const attendues = RUBRIQUES.filter(
-      (rubrique) => rubrique.groupe === groupe,
-    ).map((rubrique) => rubrique.libelle);
+    await expect(onglets).toHaveCount(rubrique.onglets.length);
 
-    await expect(liste.getByRole("link")).toHaveCount(attendues.length);
-
-    for (const [rang, libelle] of attendues.entries()) {
-      await expect(liste.getByRole("link").nth(rang)).toHaveText(
-        new RegExp(`^${libelle}`),
+    for (const [rang, onglet] of rubrique.onglets.entries()) {
+      await expect(onglets.nth(rang)).toHaveText(
+        new RegExp(`^${onglet.libelle}`),
       );
     }
+
+    await expect(onglets.first()).toHaveAttribute("aria-current", "page");
   }
 });
 
@@ -403,13 +404,14 @@ test("la pastille des messages compte les messages réellement non lus", async (
   page,
 }) => {
   await page.goto("/administration/messages");
-  await ouvrirLaBarreSiRepliee(page);
 
-  const barre = page.getByRole("navigation", {
-    name: "Sections de l'administration",
-  });
-
-  const lien = barre.getByRole("link", { name: /^Messages/ });
+  /*
+   * LE COMPTE EST CELUI DE L'ONGLET « Messages » : la pastille de la rubrique
+   * additionne les messages et les avis à relire.
+   */
+  const lien = page
+    .getByRole("navigation", { name: "Clients et avis", exact: true })
+    .getByRole("link", { name: /^Messages/ });
 
   /*
    * ------------------------------------------------------------------
@@ -477,7 +479,6 @@ test("la pastille des messages compte les messages réellement non lus", async (
   for (let tour = 0; tour < TOURS && !accorde; tour++) {
     if (tour > 0) {
       await page.reload();
-      await ouvrirLaBarreSiRepliee(page);
     }
 
     const [texteLien, nonLus] = await Promise.all([
@@ -861,7 +862,7 @@ test("un produit s'ouvre au clic depuis le catalogue, sans saisir d'identifiant"
 
   await page
     .getByRole("navigation", { name: "Sections de l'administration" })
-    .getByRole("link", { name: /^Produits/ })
+    .getByRole("link", { name: /^Catalogue/ })
     .click();
 
   await expect(

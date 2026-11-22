@@ -9,26 +9,30 @@
  */
 
 /*
- * LES COULEURS DE FAMILLE, LS-326 : une par groupe de rubriques, prises dans
- * les jetons d'ADR-022, aucune valeur neuve. Toutes portent du texte blanc ou
- * s'écrivent sur blanc à 4,5:1 au moins, mesuré :
+ * LES COULEURS DES SEPT RUBRIQUES, refonte du 22 novembre 2026 : une par
+ * rubrique, prises dans les jetons existants, aucune valeur neuve. Toutes
+ * portent du texte blanc à 4,5:1 au moins, mesuré :
  *
- *   ensemble   --ls-primary                  #5F4519   8,93:1 avec le blanc
- *   ventes     --ls-accent-terracotta-deep   #9C4F2B   5,89:1
- *   clients    --ls-accent-gold-deep         #8A6A22   5,04:1
- *   catalogue  --ls-success                  #3F6B4A   6,15:1
- *   reglages   --ls-primary-hover            #4A2A0B  12,91:1
+ *   accueil       --ls-primary                  #5F4519   8,93:1 avec le blanc
+ *   commandes     --ls-accent-terracotta-deep   #9C4F2B   5,89:1
+ *   retours       --ls-error                    #A33A2E   6,56:1
+ *   catalogue     --ls-success                  #3F6B4A   6,15:1
+ *   clients       --ls-accent-gold-deep         #8A6A22   5,04:1
+ *   statistiques  --ls-ciel-crepuscule-haut     #7E525C   6,46:1
+ *   reglages      --ls-text-muted               #7A6A5D   5,19:1
  *
  * LES RAYONS S'ADOUCISSENT DANS L'ADMINISTRATION SEULEMENT : redéfinis ici,
  * ils valent pour tous ses écrans d'un coup, cartes, champs et boutons, sans
  * toucher la boutique, dont `:root` garde les siens.
  */
 .gabarit {
-  --ls-famille-ensemble: var(--ls-primary);
-  --ls-famille-ventes: var(--ls-accent-terracotta-deep);
-  --ls-famille-clients: var(--ls-accent-gold-deep);
+  --ls-famille-accueil: var(--ls-primary);
+  --ls-famille-commandes: var(--ls-accent-terracotta-deep);
+  --ls-famille-retours: var(--ls-error);
   --ls-famille-catalogue: var(--ls-success);
-  --ls-famille-reglages: var(--ls-primary-hover);
+  --ls-famille-clients: var(--ls-accent-gold-deep);
+  --ls-famille-statistiques: var(--ls-ciel-crepuscule-haut);
+  --ls-famille-reglages: var(--ls-text-muted);
   --ls-radius-sm: 8px;
   --ls-radius-md: 12px;
   display: flex;
@@ -101,30 +105,33 @@
  * couleur de la vue d'ensemble.
  */
 .colonne {
-  --ls-famille: var(--ls-famille-ensemble);
+  --ls-famille: var(--ls-famille-accueil);
 }
 
-.colonne:has([data-famille="ventes"]) {
-  --ls-famille: var(--ls-famille-ventes);
+.colonne:has([data-famille="commandes"]) {
+  --ls-famille: var(--ls-famille-commandes);
 }
 
-.colonne:has([data-famille="clients"]) {
-  --ls-famille: var(--ls-famille-clients);
+.colonne:has([data-famille="retours"]) {
+  --ls-famille: var(--ls-famille-retours);
 }
 
 .colonne:has([data-famille="catalogue"]) {
   --ls-famille: var(--ls-famille-catalogue);
 }
 
+.colonne:has([data-famille="clients"]) {
+  --ls-famille: var(--ls-famille-clients);
+}
+
+.colonne:has([data-famille="statistiques"]) {
+  --ls-famille: var(--ls-famille-statistiques);
+}
+
 .colonne:has([data-famille="reglages"]) {
   --ls-famille: var(--ls-famille-reglages);
 }
 
-/*
- * LE TITRE D'ÉCRAN EST SOULIGNÉ D'UN TRAIT À LA COULEUR DE LA FAMILLE, décor :
- * il vaut pour tout `h1` de l'administration, comme la police ci-dessus, sans
- * classe à poser. Il grandit une fois à l'arrivée, ADR-045 amendé.
- */
 .colonne h1::after {
   content: "";
   display: block;

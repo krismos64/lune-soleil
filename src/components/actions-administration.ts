@@ -33,13 +33,13 @@ export const ACTIONS_RAPIDES: readonly ActionRapide[] = [
   {
     libelle: "Changer le thème de la boutique",
     precision: "Saisons, fêtes et opérations",
-    chemin: "/administration/parametres#theme-saisonnier",
+    chemin: "/administration/parametres?section=ambiance#theme-saisonnier",
     icone: "theme",
   },
   {
     libelle: "Régler une promotion",
     precision: "Taux, articles et période",
-    chemin: "/administration/parametres#promotion",
+    chemin: "/administration/parametres?section=ambiance#promotion",
     icone: "promotion",
   },
 ] as const;

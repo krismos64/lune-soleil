@@ -1,7 +1,7 @@
 /**
  * La navigation repensée de l'administration, LS-325, ADR-045 amendé le
- * 14 novembre 2026 : palette « Aller à… », actions directes et arc du jour
- * du tableau de bord.
+ * 14 novembre 2026 : palette « Aller à… » et actions directes du tableau de
+ * bord. L'arc du jour est retiré par la refonte du 22 novembre 2026.
  *
  * CE FICHIER NE REFAIT PAS `navigation-administration.spec.ts`, qui verrouille
  * la barre latérale, ses groupes et ses pastilles. Il couvre ce qui est neuf :
@@ -68,7 +68,7 @@ test.describe("administratrice", () => {
     // « stock » mène à la rubrique dont c'est le NOM, pas à l'action dont la
     // précision cite le stock ; le compte des résultats est annoncé.
     await champ.fill("stock");
-    await expect(options.first()).toContainText("Stocks et marchés");
+    await expect(options.first()).toContainText("Stock et marchés");
     await expect(options.first()).toHaveAttribute("aria-selected", "true");
     await expect(palette.getByRole("status")).toHaveText("2 résultats");
 
@@ -177,7 +177,7 @@ test.describe("administratrice", () => {
     expect(resultat.violations.map((v) => `${v.id} : ${v.help}`)).toEqual([]);
   });
 
-  test("le tableau de bord porte ses actions directes, « À traiter » avant les chiffres", async ({
+  test("le tableau de bord porte ses chiffres, puis « À faire » et ses actions directes", async ({
     page,
   }) => {
     await page.goto("/administration");
@@ -185,16 +185,16 @@ test.describe("administratrice", () => {
       page.getByRole("heading", { name: "Tableau de bord", level: 1 }),
     ).toBeVisible();
 
+    /*
+     * DEUX ACTIONS DIRECTES DEPUIS LA REFONTE DU 22 NOVEMBRE 2026 : l'ambiance
+     * et la promotion se règlent depuis « En ce moment sur la boutique », qui
+     * dit aussi ce qui est actif. Les quatre restent dans la palette.
+     */
     const actions = page.getByRole("navigation", { name: "Actions directes" });
-    await expect(actions.getByRole("link")).toHaveCount(4);
+    await expect(actions.getByRole("link")).toHaveCount(2);
     for (const [nom, chemin] of [
       ["Créer un produit", "/administration/produits/nouveau"],
       ["Enregistrer une vente de marché", "/administration/stocks"],
-      [
-        "Changer le thème de la boutique",
-        "/administration/parametres#theme-saisonnier",
-      ],
-      ["Régler une promotion", "/administration/parametres#promotion"],
     ] as const) {
       await expect(actions.getByRole("link", { name: nom })).toHaveAttribute(
         "href",
@@ -202,23 +202,34 @@ test.describe("administratrice", () => {
       );
     }
 
-    // L'ordre de lecture : ce qui attend un geste, puis les indicateurs.
+    const moment = page.getByRole("region", {
+      name: "En ce moment sur la boutique",
+    });
+    await expect(
+      moment.getByRole("link", { name: "Changer l'ambiance" }),
+    ).toHaveAttribute(
+      "href",
+      "/administration/parametres?section=ambiance#theme-saisonnier",
+    );
+    await expect(
+      moment.getByRole("link", { name: "Régler une promotion" }),
+    ).toHaveAttribute(
+      "href",
+      "/administration/parametres?section=ambiance#promotion",
+    );
+
+    // L'ordre de lecture : les chiffres d'un coup d'œil, puis « À faire ».
     // Les indicateurs arrivent sous un `<Suspense>` : attendre le contenu
     // réel, sans quoi la mesure porte sur l'armature de chargement.
     await expect(
-      page.getByRole("heading", { name: "À traiter maintenant", level: 2 }),
+      page.getByRole("heading", { name: "À faire", level: 2 }),
     ).toBeVisible();
     await expect(page.getByText("Encaissé aujourd'hui")).toBeVisible();
     const ordre = await page.getByRole("main").evaluate((main) => {
       const texte = main.textContent ?? "";
-      return texte.indexOf("À traiter maintenant") < texte.indexOf("Encaissé");
+      return texte.indexOf("Encaissé") < texte.indexOf("À faire");
     });
     expect(ordre).toBe(true);
-
-    // L'arc du jour est un décor : aucun texte dedans, rien d'annoncé.
-    const ciel = page.locator("main header [data-moment]");
-    await expect(ciel).toHaveAttribute("aria-hidden", "true");
-    await expect(ciel).toHaveText("");
 
     expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
       TOLERANCE_DEBORDEMENT_PX,
@@ -235,8 +246,10 @@ test.describe("administratrice", () => {
       page,
     }) => {
       await page.goto("/administration");
-      await expect(page.locator("main header [data-moment]")).toBeVisible();
-      // L'arc se trace et l'astre monte : rien d'infini, à aucun moment.
+      await expect(
+        page.getByRole("heading", { name: "Tableau de bord", level: 1 }),
+      ).toBeVisible();
+      // L'icône du repère se trace : rien d'infini, à aucun moment.
       expect((await animations(page)).sansFin).toBe(0);
       // Deux secondes au plus, ADR-045 amendé : ensuite, plus rien ne bouge.
       await expect
@@ -248,9 +261,11 @@ test.describe("administratrice", () => {
   test.describe("mouvement réduit", () => {
     test.use({ contextOptions: { reducedMotion: "reduce" } });
 
-    test("rien ne s'anime, ni l'arc ni la palette", async ({ page }) => {
+    test("rien ne s'anime, ni le repère ni la palette", async ({ page }) => {
       await page.goto("/administration");
-      await expect(page.locator("main header [data-moment]")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Tableau de bord", level: 1 }),
+      ).toBeVisible();
       expect((await animations(page)).enCours).toBe(0);
       await page.getByRole("button", { name: "Aller à…" }).click();
       await expect(page.getByRole("combobox")).toBeFocused();

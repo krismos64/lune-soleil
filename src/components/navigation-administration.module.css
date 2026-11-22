@@ -250,28 +250,57 @@
 }
 
 /*
- * CHAQUE RUBRIQUE PORTE LA COULEUR DE SA FAMILLE, LS-326 : son icône et son
- * repère. Les couleurs viennent du layout, `--ls-famille-*`, toutes à 4,5:1
- * au moins sur le fond de la barre.
+ * CHAQUE RUBRIQUE PORTE SA COULEUR, refonte du 22 novembre 2026 : une puce
+ * teintée autour de l'icône, le repère et la pastille. Les couleurs viennent
+ * du layout, `--ls-famille-*`, toutes à 4,5:1 au moins avec du blanc, ce que
+ * la pastille exige. Le texte du libellé, lui, ne change jamais de couleur.
  */
-.lien[data-famille="ensemble"] {
-  --famille: var(--ls-famille-ensemble, var(--ls-primary));
+.lien[data-famille="accueil"] {
+  --famille: var(--ls-famille-accueil, var(--ls-primary));
 }
 
-.lien[data-famille="ventes"] {
-  --famille: var(--ls-famille-ventes, var(--ls-primary));
+.lien[data-famille="commandes"] {
+  --famille: var(--ls-famille-commandes, var(--ls-primary));
 }
 
-.lien[data-famille="clients"] {
-  --famille: var(--ls-famille-clients, var(--ls-primary));
+.lien[data-famille="retours"] {
+  --famille: var(--ls-famille-retours, var(--ls-primary));
 }
 
 .lien[data-famille="catalogue"] {
   --famille: var(--ls-famille-catalogue, var(--ls-primary));
 }
 
+.lien[data-famille="clients"] {
+  --famille: var(--ls-famille-clients, var(--ls-primary));
+}
+
+.lien[data-famille="statistiques"] {
+  --famille: var(--ls-famille-statistiques, var(--ls-primary));
+}
+
 .lien[data-famille="reglages"] {
   --famille: var(--ls-famille-reglages, var(--ls-primary));
+}
+
+/* La puce de l'icône, teinte légère de la couleur de la rubrique. */
+.lienPuce {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--famille, var(--ls-primary)) 13%, white);
+  transition: background var(--ls-duration-base) var(--ls-easing);
+}
+
+.lien[aria-current="page"] .lienPuce {
+  background: var(--famille, var(--ls-primary));
+}
+
+.lien[aria-current="page"] .lienIcone {
+  color: #fff;
 }
 
 .lienIcone {
@@ -308,8 +337,8 @@
  * `--ls-primary-hover` sur `--ls-admin-actif` : 10,82:1, AAA.
  */
 .lien[aria-current="page"] {
-  background: var(--ls-admin-actif);
-  color: var(--ls-primary-hover);
+  background: color-mix(in srgb, var(--famille, var(--ls-primary)) 9%, white);
+  color: var(--ls-text);
   font-weight: 700;
 }
 
@@ -330,8 +359,8 @@
   height: 22px;
   padding: 0 var(--ls-space-1);
   border-radius: 999px;
-  background: var(--ls-admin-pastille);
-  color: var(--ls-primary-hover);
+  background: var(--famille, var(--ls-primary));
+  color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;

@@ -31,7 +31,7 @@ import { flushSync } from "react-dom";
 
 import { ACTIONS_RAPIDES } from "./actions-administration";
 import { IconeAdministration, type NomIcone } from "./icones-administration";
-import { GROUPES, RUBRIQUES } from "./navigation-administration";
+import { RUBRIQUES } from "./navigation-administration";
 import styles from "./palette-administration.module.css";
 
 type Entree = {
@@ -43,19 +43,25 @@ type Entree = {
   icone: NomIcone;
 };
 
-const TITRE_GROUPE = new Map<string, string>(
-  GROUPES.map((groupe) => [groupe.cle, groupe.titre]),
-);
-
 /** Les actions d'abord, puis les rubriques dans l'ordre de la barre. */
 const SANS_RANG: readonly Omit<Entree, "rang">[] = [
   ...ACTIONS_RAPIDES,
-  ...RUBRIQUES.map((rubrique) => ({
-    libelle: rubrique.libelle,
-    precision: TITRE_GROUPE.get(rubrique.groupe) ?? "",
-    chemin: rubrique.chemin,
-    icone: rubrique.icone,
-  })),
+  /*
+   * CHAQUE ÉCRAN DE CHAQUE RUBRIQUE, nommé par son onglet et précisé par sa
+   * rubrique : « Expéditions », dans Commandes. Un onglet qui porte le nom de
+   * sa rubrique ne se répète pas, il prend la précision de la rubrique.
+   */
+  ...RUBRIQUES.flatMap((rubrique) =>
+    rubrique.onglets.map((onglet) => ({
+      libelle: onglet.libelle === "Aujourd'hui" ? "Accueil" : onglet.libelle,
+      precision:
+        onglet.libelle === rubrique.libelle || onglet.libelle === "Aujourd'hui"
+          ? rubrique.precision
+          : rubrique.libelle,
+      chemin: onglet.chemin,
+      icone: rubrique.icone,
+    })),
+  ),
   {
     libelle: "Voir la boutique",
     precision: "Le site tel que les visiteurs le voient",

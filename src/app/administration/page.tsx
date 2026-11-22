@@ -37,7 +37,8 @@ import {
   lireNomAffiche,
 } from "@/services/tableau-bord";
 import { ACTIONS_RAPIDES } from "@/components/actions-administration";
-import { CielDuJour, heureDeParis } from "@/components/ciel-du-jour";
+import { heureDeParis } from "@/lib/heure-de-paris";
+import { lireEtatPromotion } from "@/services/promotion";
 import {
   IconeAdministration,
   type NomIcone,
@@ -47,6 +48,7 @@ import {
   lireThemeSaisonnier,
 } from "@/services/theme-saisonnier";
 import { formaterMontant } from "@/lib/montant";
+import type { ThemeSaisonnier } from "@/lib/theme-saisonnier";
 
 import styles from "./tableau-bord.module.css";
 
@@ -159,65 +161,19 @@ export default async function PageAdministration() {
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       {/*
-       * L'EN-TÊTE SUIT L'HEURE, LS-325 : le soleil ou la lune sur son arc,
-       * décor seul. Le texte vit DESSOUS, jamais sur le fond qui change.
+       * L'EN-TÊTE DIT LE JOUR ET SALUE, sans plus : la refonte du 22 novembre
+       * 2026 a retiré l'arc du jour et la phrase qui expliquait l'écran.
        */}
       <header className={styles.entete}>
-        <CielDuJour heure={heure} />
-        <div className={styles.accueil}>
-          <p className={styles.surtitre}>{dateDuJour()}</p>
-          <h1 className={styles.titre}>Tableau de bord</h1>
-          <p className={styles.introduction}>
-            {salutation(heure)} {nom}. Ce qui attend un geste est en tête, les
-            chiffres viennent ensuite.
-          </p>
-        </div>
+        <p className={styles.surtitre}>{dateDuJour()}</p>
+        <h1 className={styles.titre}>Tableau de bord</h1>
+        <p className={styles.introduction}>
+          {salutation(heure)} {nom}.
+        </p>
       </header>
 
-      {/*
-       * LES ACTIONS DIRECTES, LS-325 : ce qui se fait le plus souvent, à un
-       * geste. La palette « Aller à… » propose les mêmes, sous le même nom.
-       */}
-      <nav className={styles.actions} aria-label="Actions directes">
-        <ul className={styles.listeActions}>
-          {ACTIONS_RAPIDES.map((action) => (
-            <li key={action.chemin}>
-              <Link
-                href={action.chemin}
-                className={styles.action}
-                prefetch={false}
-              >
-                <span className={styles.actionIcone}>
-                  <IconeAdministration nom={action.icone} />
-                </span>
-                <span className={styles.actionTextes}>
-                  <span className={styles.actionLibelle}>{action.libelle}</span>
-                  <span className={styles.actionPrecision}>
-                    {action.precision}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {theme !== "AUCUN" ? (
-        <p className={styles.rappelTheme}>
-          Thème actif sur l&apos;accueil et le catalogue :{" "}
-          {LIBELLES_THEMES[theme]}.{" "}
-          <Link
-            href="/administration/parametres"
-            className={styles.lienRappel}
-            prefetch={false}
-          >
-            Changer de thème
-          </Link>
-        </p>
-      ) : null}
-
       <Suspense fallback={<ChargementIndicateurs />}>
-        <IndicateursTableauBord />
+        <IndicateursTableauBord theme={theme} />
       </Suspense>
     </main>
   );
@@ -298,41 +254,36 @@ function ChargementIndicateurs() {
  * de la frontiere, qui enveloppe tout le sous-arbre.
  * ------------------------------------------------------------------
  */
-async function IndicateursTableauBord() {
-  const comptages = await lireComptages();
-  const stock = await lireEtatStock();
+async function IndicateursTableauBord({ theme }: { theme: ThemeSaisonnier }) {
+  const [comptages, stock, promotion] = await Promise.all([
+    lireComptages(),
+    lireEtatStock(),
+    lireEtatPromotion(),
+  ]);
 
   /*
-   * CE QUI ATTEND UN GESTE, dans l'ordre ou l'exploitante le traite. Une entree
-   * dont le compte est nul ne s'affiche pas : un panneau « a traiter » qui
-   * liste quatre lignes a zero apprend qu'il n'y a rien a faire, ce que
-   * l'absence de lignes dit mieux et plus vite.
+   * CE QUI ATTEND UN GESTE, dans l'ordre où il se traite : vendre, rendre,
+   * répondre, surveiller. Une ligne à zéro ne s'affiche pas. Les alertes du
+   * site entrent ici, refonte du 22 novembre 2026 : leur écran reste dans
+   * l'onglet Alertes de l'accueil.
    */
   const aTraiter = [
     {
       chemin: "/administration/commandes",
-      /*
-       * LE SINGULIER ET LE PLURIEL SONT ECRITS TOUS LES DEUX, jamais un « (s) »
-       * ni un pluriel systematique. « 1 commandes à préparer » se lit comme un
-       * defaut, et sur une boutique de pieces uniques le cas a un exemplaire
-       * est le plus frequent : c'est la forme qu'on verra le plus souvent.
-       */
       libelle: (n: number) =>
         n > 1 ? "commandes à préparer" : "commande à préparer",
       nombre: comptages.commandesAPreparer,
-      action: "Ouvrir",
-    },
-    {
-      chemin: "/administration/expeditions",
-      /* « Colis » est invariable, une ternaire y donnerait deux fois le même. */
-      libelle: () => "colis à expédier",
-      nombre: comptages.commandesPretesAExpedier,
       action: "Préparer",
     },
     {
+      chemin: "/administration/expeditions",
+      libelle: () => "colis à expédier",
+      nombre: comptages.commandesPretesAExpedier,
+      action: "Expédier",
+    },
+    {
       chemin: "/administration/retractations",
-      libelle: (n: number) =>
-        n > 1 ? "rétractations en cours" : "rétractation en cours",
+      libelle: (n: number) => (n > 1 ? "retours en cours" : "retour en cours"),
       nombre: comptages.retractationsEnCours,
       action: "Traiter",
     },
@@ -343,73 +294,49 @@ async function IndicateursTableauBord() {
       action: "Lire",
     },
     {
+      chemin: "/administration/avis",
+      libelle: (n: number) => (n > 1 ? "avis à relire" : "avis à relire"),
+      nombre: comptages.avisAModerer,
+      action: "Relire",
+    },
+    {
       chemin: "/administration/stocks",
       libelle: (n: number) =>
-        n > 1 ? "variantes en stock faible" : "variante en stock faible",
+        n > 1 ? "pièces en stock bas" : "pièce en stock bas",
       nombre: comptages.variantesStockFaible,
-      action: "Contrôler",
+      action: "Voir",
+    },
+    {
+      chemin: "/administration/alertes",
+      libelle: (n: number) =>
+        n > 1
+          ? "problèmes signalés par le site"
+          : "problème signalé par le site",
+      nombre: comptages.alertesOuvertes,
+      action: "Voir",
     },
   ].filter((entree) => entree.nombre > 0);
 
   return (
     <>
       {/*
-       * « À TRAITER » PASSE AVANT LES CHIFFRES, LS-325 : c'est ce que
-       * l'exploitante vient chercher, les indicateurs le suivent.
+       * LES QUATRE CHIFFRES EN TÊTE, refonte du 22 novembre 2026 : ils se
+       * lisent d'un coup d'œil, la liste « À faire » dit ensuite quoi en faire.
        */}
-      <section className={styles.panneau} aria-labelledby="a-traiter">
-        <h2 className={styles.panneauTitre} id="a-traiter">
-          À traiter maintenant
-        </h2>
-
-        {aTraiter.length === 0 ? (
-          /*
-           * L'ETAT VIDE EST UNE BONNE NOUVELLE ET LE DIT. `frontend-design.md`
-           * exige un etat vide sur tout ecran ; ici il est aussi le cas le plus
-           * frequent d'une petite boutique, pas une exception rare.
-           */
-          <p className={styles.vide}>
-            Rien n&apos;attend de geste pour le moment.
-          </p>
-        ) : (
-          <ul className={styles.liste}>
-            {aTraiter.map((entree) => (
-              <li key={entree.chemin} className={styles.entree}>
-                <span className={styles.entreeNombre} aria-hidden="true">
-                  {entree.nombre}
-                </span>
-                <span className={styles.entreeLibelle}>
-                  {entree.nombre} {entree.libelle(entree.nombre)}
-                </span>
-                <Link
-                  href={entree.chemin}
-                  className={styles.entreeAction}
-                  prefetch={false}
-                >
-                  {entree.action}
-                  {/*
-                   * LE NOM ACCESSIBLE DIT DE QUOI, jamais « Ouvrir » seul. Une
-                   * liste de liens lus a la suite donnerait « Ouvrir, Préparer,
-                   * Traiter » sans leur objet.
-                   */}
-                  <span className={styles.invisible}>
-                    {" "}
-                    : {entree.libelle(entree.nombre)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <div className={styles.tuiles}>
+        <Tuile
+          libelle="Encaissé aujourd'hui"
+          valeur={formaterMontant(comptages.encaisseDuJourCentimes)}
+          precision="En ligne et sur les marchés"
+          ton={comptages.encaisseDuJourCentimes > 0 ? "recette" : undefined}
+          icone="statistiques"
+        />
         <Tuile
           libelle="À préparer"
           valeur={String(comptages.commandesAPreparer)}
           precision={
             comptages.commandesAPreparer > 0
-              ? "Paiements confirmés"
+              ? "Commandes payées"
               : "Rien en attente"
           }
           ton={comptages.commandesAPreparer > 0 ? "urgent" : undefined}
@@ -418,109 +345,197 @@ async function IndicateursTableauBord() {
         <Tuile
           libelle="Prêtes à expédier"
           valeur={String(comptages.commandesPretesAExpedier)}
-          /*
-           * LA PRECISION S'ADAPTE AU CAS NUL, comme les trois autres tuiles.
-           * « 0 / Étiquette à générer » se lit comme une consigne : sur une
-           * boutique qui demarre, c'est ce que l'exploitante verrait en premier
-           * alors qu'il n'y a rien a faire.
-           */
           precision={
             comptages.commandesPretesAExpedier > 0
-              ? "Étiquette à générer"
+              ? "Étiquette à créer"
               : "Aucun colis en attente"
           }
           icone="expeditions"
         />
         <Tuile
-          libelle="Stock faible"
+          libelle="Stock bas"
           valeur={String(comptages.variantesStockFaible)}
           precision={
             comptages.variantesIndisponibles > 0
-              ? `Dont ${comptages.variantesIndisponibles} indisponible${
+              ? `Dont ${comptages.variantesIndisponibles} épuisée${
                   comptages.variantesIndisponibles > 1 ? "s" : ""
                 }`
-              : "Aucune rupture"
+              : "Aucune pièce épuisée"
           }
           ton={comptages.variantesIndisponibles > 0 ? "urgent" : undefined}
           icone="stocks"
         />
-        <Tuile
-          libelle="Encaissé aujourd'hui"
-          valeur={formaterMontant(comptages.encaisseDuJourCentimes)}
-          /*
-           * LES DEUX CANAUX SONT NOMMES, et ce n'est pas cosmetique : sans
-           * cette mention, un montant superieur aux commandes du jour
-           * ressemble a une erreur. La vente de marche est invisible ailleurs
-           * dans cet ecran.
-           */
-          precision="Ventes en ligne et marchés"
-          /*
-           * LE FILET VERT NE S'ALLUME QUE SUR UNE RECETTE REELLE. Il marque une
-           * bonne nouvelle : le poser sur « 0,00 € » en ferait un ornement
-           * permanent, et un marqueur toujours allume ne marque plus rien. Meme
-           * regle que les deux tons `urgent`, conditionnes a un compte non nul.
-           */
-          ton={comptages.encaisseDuJourCentimes > 0 ? "recette" : undefined}
-          icone="statistiques"
-        />
       </div>
 
-      {/*
-       * L'ÉTAT DU STOCK, LS-228 critère 5 : ce que l'atelier tient en main, ce
-       * qu'un paiement en cours retient, et ce qui reste vendable. Même
-       * périmètre que la pastille de stock faible, variantes vivantes d'un
-       * produit non retiré : les deux ne peuvent pas se contredire.
-       */}
-      <section className={styles.panneau} aria-labelledby="etat-stock">
-        <h2 className={styles.panneauTitre} id="etat-stock">
-          État du stock
-        </h2>
+      <div className={styles.grille}>
+        <section className={styles.panneau} aria-labelledby="a-traiter">
+          <h2 className={styles.panneauTitre} id="a-traiter">
+            À faire
+          </h2>
 
-        {stock.variantes === 0 ? (
-          <p className={styles.vide}>Aucune pièce en stock pour le moment.</p>
-        ) : (
-          <>
-            {/*
-             * LA JAUGE, décor : la part des pièces réservées dans le stock
-             * physique. Les trois nombres qui suivent la disent en texte.
-             */}
-            <div className={styles.jauge} aria-hidden="true">
-              <span
-                className={styles.jaugeReservee}
-                style={{ flexGrow: stock.reservees }}
-              />
-              <span
-                className={styles.jaugeDisponible}
-                // Le disponible du SERVEUR, calculé variante par variante :
-                // le recalculer ici pourrait diverger du chiffre affiché.
-                style={{ flexGrow: stock.disponibles }}
-              />
-            </div>
-            <dl className={styles.etatStock}>
+          {aTraiter.length === 0 ? (
+            <p className={styles.vide}>Rien ne vous attend pour le moment.</p>
+          ) : (
+            <ul className={styles.liste}>
+              {aTraiter.map((entree) => (
+                <li key={entree.chemin} className={styles.entree}>
+                  <span className={styles.entreeNombre} aria-hidden="true">
+                    {entree.nombre}
+                  </span>
+                  <span className={styles.entreeLibelle}>
+                    {entree.nombre} {entree.libelle(entree.nombre)}
+                  </span>
+                  <Link
+                    href={entree.chemin}
+                    className={styles.entreeAction}
+                    prefetch={false}
+                  >
+                    {entree.action}
+                    {/*
+                     * LE NOM DU LIEN DIT CE QU'IL OUVRE : sept « Voir » ou
+                     * « Lire » nus seraient indiscernables au lecteur d'écran.
+                     */}
+                    <span className={styles.invisible}>
+                      {" "}
+                      : {entree.libelle(entree.nombre)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <div className={styles.colonneDroite}>
+          {/*
+           * LES DEUX GESTES LES PLUS FRÉQUENTS, à un clic. Le thème et la
+           * promotion se règlent depuis le bloc « En ce moment », qui dit
+           * aussi ce qui est actif.
+           */}
+          <nav
+            className={`${styles.panneau} ${styles.actions}`}
+            aria-label="Actions directes"
+          >
+            <ul className={styles.listeActions}>
+              {ACTIONS_RAPIDES.slice(0, 2).map((action) => (
+                <li key={action.chemin}>
+                  <Link
+                    href={action.chemin}
+                    className={styles.action}
+                    prefetch={false}
+                  >
+                    <span className={styles.actionIcone}>
+                      <IconeAdministration nom={action.icone} />
+                    </span>
+                    <span className={styles.actionTextes}>
+                      <span className={styles.actionLibelle}>
+                        {action.libelle}
+                      </span>
+                      <span className={styles.actionPrecision}>
+                        {action.precision}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/*
+           * CE QUI HABILLE LA BOUTIQUE EN CE MOMENT, ADR-046 et ADR-051 : un
+           * thème de Noël oublié en février, ou une promotion restée active,
+           * se voit à la première ouverture.
+           */}
+          <section className={styles.panneau} aria-labelledby="en-ce-moment">
+            <h2 className={styles.panneauTitre} id="en-ce-moment">
+              En ce moment sur la boutique
+            </h2>
+            <dl className={styles.etatBoutique}>
               <div className={styles.etatStockLigne}>
-                <dt>Pièces physiques</dt>
-                <dd>{stock.physiques}</dd>
+                <dt>Ambiance</dt>
+                <dd>{theme === "AUCUN" ? "Aucune" : LIBELLES_THEMES[theme]}</dd>
               </div>
               <div className={styles.etatStockLigne}>
-                <dt>Réservées par un paiement en cours</dt>
-                <dd>{stock.reservees}</dd>
-              </div>
-              <div className={styles.etatStockLigne}>
-                <dt>Disponibles, hors réservations</dt>
-                <dd>{stock.disponibles}</dd>
+                <dt>Promotion</dt>
+                <dd>
+                  {promotion.active === null
+                    ? "Aucune"
+                    : promotion.active.libelle}
+                </dd>
               </div>
             </dl>
-          </>
-        )}
+            <div className={styles.liensPanneau}>
+              <Link
+                href="/administration/parametres?section=ambiance#theme-saisonnier"
+                className={styles.lienPanneau}
+                prefetch={false}
+              >
+                Changer l&apos;ambiance
+              </Link>
+              <Link
+                href="/administration/parametres?section=ambiance#promotion"
+                className={styles.lienPanneau}
+                prefetch={false}
+              >
+                Régler une promotion
+              </Link>
+            </div>
+          </section>
 
-        <Link
-          href="/administration/stocks"
-          className={styles.lienPanneau}
-          prefetch={false}
-        >
-          Voir les stocks et marchés
-        </Link>
-      </section>
+          {/*
+           * L'ÉTAT DU STOCK, en mots de tous les jours : « en cours de
+           * paiement » plutôt que « réservées », la notion technique.
+           */}
+          <section className={styles.panneau} aria-labelledby="etat-stock">
+            <h2 className={styles.panneauTitre} id="etat-stock">
+              État du stock
+            </h2>
+
+            {stock.variantes === 0 ? (
+              <p className={styles.vide}>
+                Aucune pièce en stock pour le moment.
+              </p>
+            ) : (
+              <>
+                <div className={styles.jauge} aria-hidden="true">
+                  <span
+                    className={styles.jaugeReservee}
+                    style={{ flexGrow: stock.reservees }}
+                  />
+                  <span
+                    className={styles.jaugeDisponible}
+                    // Le disponible du SERVEUR, calculé variante par variante :
+                    // le recalculer ici pourrait diverger du chiffre affiché.
+                    style={{ flexGrow: stock.disponibles }}
+                  />
+                </div>
+                <dl className={styles.etatStock}>
+                  <div className={styles.etatStockLigne}>
+                    <dt>Pièces en stock</dt>
+                    <dd>{stock.physiques}</dd>
+                  </div>
+                  <div className={styles.etatStockLigne}>
+                    <dt>En cours de paiement</dt>
+                    <dd>{stock.reservees}</dd>
+                  </div>
+                  <div className={styles.etatStockLigne}>
+                    <dt>Disponibles à la vente</dt>
+                    <dd>{stock.disponibles}</dd>
+                  </div>
+                </dl>
+              </>
+            )}
+
+            <Link
+              href="/administration/stocks"
+              className={styles.lienPanneau}
+              prefetch={false}
+            >
+              Voir le stock et les marchés
+            </Link>
+          </section>
+        </div>
+      </div>
     </>
   );
 }
