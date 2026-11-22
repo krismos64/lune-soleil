@@ -125,6 +125,14 @@ for my $script (@ARGV) {
     $variables{$1} = $2 if /^([A-Z_][A-Z0-9_]*)="([^"\$]*)"\s*$/;
   }
 
+  # UN FICHIER MUTE DOIT FIGURER DANS MUTABLES, quand le script en tient une,
+  # LS-334. Hors de cette liste il n est jamais restaure : le script s arrete
+  # alors au premier cas qui le mute, et tous les cas suivants se taisent. Le
+  # nocturne 112 l a montre sur `DEPOT_PROMOTION`, ajoute par LS-333 sans
+  # entrer dans la liste ; ce controle-ci ne le voyait pas.
+  my ($mutables) = $texte =~ /^MUTABLES=\((.*)\)\s*$/m;
+  my %hors_liste;
+
   # Les fonctions definies au premier niveau, et leur corps.
   my %corps;
   while ($texte =~ /^([a-z_][a-z0-9_]*)\(\) \{\n(.*?)^\}/msg) {
@@ -219,6 +227,10 @@ for my $script (@ARGV) {
         print "  ECHEC $script:$numero : \$$variable ne designe aucun fichier lisible\n";
         $echecs++;
         next;
+      }
+      if (defined $mutables && $mutables !~ /"\$\Q$variable\E"/ && !$hors_liste{$variable}++) {
+        print "  ECHEC $script:$numero : \$$variable est mute mais absent de MUTABLES\n";
+        $echecs++;
       }
       if (!exists $courant{$fichier}) {
         open my $g, "<", $fichier or die;
