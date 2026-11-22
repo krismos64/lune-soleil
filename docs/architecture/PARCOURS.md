@@ -80,7 +80,7 @@ stock à un exemplaire est le jalon technique majeur.
 | 1 | Consultation du catalogue | rien | produits actifs, disponibilité dérivée |
 | 2 | Ajout au panier, depuis la fiche ou la carte d'une pièce à une variante, LS-240 | ligne de panier, éphémère | panier mis à jour, compteur ; **refus nommé** si le cumul dépasse le disponible, LS-238, sans rien réserver |
 | 3 | Revalidation serveur | rien | totaux recalculés depuis le serveur |
-| 3b | Choix du mode de livraison | rien | trois modes, frais de port recalculés côté serveur, point de retrait choisi si `POINT_RELAIS` ou `LOCKER` |
+| 3b | Choix du mode de livraison | rien | trois modes, chacun avec son délai d'acheminement en jours ouvrés avant le choix (ADR-035, LS-334), frais de port recalculés côté serveur, point de retrait choisi si `POINT_RELAIS` ou `LOCKER` |
 | 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, **mode de livraison, point de retrait et frais de port figés**, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
 | 5 | Session de paiement, **après le commit** | tentative de paiement `EN_ATTENTE` portant l'identifiant de session, réservations prolongées à l'expiration de la session | redirection |
 | 6 | Attente de l'événement | rien | page d'attente ou retour du prestataire |
