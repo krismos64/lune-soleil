@@ -148,7 +148,9 @@ export default async function PageCommandes({
               <Link
                 href={
                   filtre.valeur === "TOUTES"
-                    ? "/administration/commandes"
+                    ? acheteur === undefined
+                      ? "/administration/commandes"
+                      : `/administration/commandes?acheteur=${encodeURIComponent(acheteur)}`
                     : `/administration/commandes?statut=${filtre.valeur}${
                         recherche === ""
                           ? ""
