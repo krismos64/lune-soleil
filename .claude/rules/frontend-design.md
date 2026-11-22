@@ -1244,7 +1244,7 @@ Six éléments, sans en ajouter :
 |---|---|---|
 | Fabrication | bijoux faits main en Béarn | **confirmé le 3 septembre 2026**, assemblage et finition à Artix (64) |
 | Paiement | paiement sécurisé par Stripe | |
-| Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025, le domicile en 4 à 6 jours contre 2 à 4 en retrait, ADR-035 |
+| Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025, le domicile en 4 à 6 jours ouvrés contre 2 à 4 en retrait, ADR-035 : `DELAI_ACHEMINEMENT_JOURS_OUVRES`, affichés avant le choix du mode depuis LS-334, jamais recopiés |
 | Gratuité | livraison offerte au seuil configuré, **en Point Relais et Locker** | ADR-035 et **ADR-043** : le seuil vaut 39 € à l'amorçage et l'exploitante le change **sans redéploiement** depuis `/administration/parametres`. Ne jamais le recopier dans un composant. **Jamais « tous modes »** : le domicile n'est pas offert, et l'annoncer sans réserve est une information précontractuelle fausse |
 | Rétractation | 14 jours pour changer d'avis | frais de retour à la charge du client, mention obligatoire |
 | Contact | réponse par email | |

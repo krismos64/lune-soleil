@@ -7,6 +7,28 @@
 | Décideur | Christophe Mostefaoui et l'exploitante |
 | Ticket | LS-27 |
 
+## Amendement du 22 novembre 2026, délais en jours ouvrés, LS-334
+
+**Les délais de la section « Le délai du domicile est annoncé » sont appliqués**,
+deux mois et demi après cet ADR : jusque-là aucun texte du site ne les
+affichait, et la page d'aide disait seulement que l'acheminement « s'y ajoute ».
+Ils vivent dans `DELAI_ACHEMINEMENT_JOURS_OUVRES` de `src/lib/livraison.ts`,
+lue par l'étape du choix du mode, la page d'aide, la foire aux questions et le
+balisage `deliveryTime` du JSON-LD.
+
+**L'unité est le jour ouvré**, arbitrage de Christophe du 22 novembre 2026,
+déclarée du lundi au vendredi dans le balisage.
+
+**Le point de retrait est mesuré, le domicile ne l'est pas.** Cet ADR ne cite
+aucune source pour ses délais, ses sources ne portant que les tarifs. Les trois
+colis livrés au 22 novembre 2026, un Point Relais et deux Lockers, ont mis
+chacun trois jours ouvrés, dans la fourchette de 2 à 4. Aucun colis n'avait
+encore été livré à domicile, et ni Mondial Relay ni Sendcloud ne publient de
+délai lisible sans compte. **Les 4 à 6 jours du domicile sont gardés par
+arbitrage de Christophe, risque accepté** : un délai annoncé et non tenu peut
+constituer une pratique commerciale trompeuse. À remesurer sur les premières
+livraisons à domicile, par `expedition.expedie_a` et `expedition.livre_a`.
+
 ## Ce que cet ADR remplace
 
 **ADR-025**, qui passe en `Remplacé par ADR-035`. Son contenu reste intact : il
