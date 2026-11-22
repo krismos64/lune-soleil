@@ -127,7 +127,27 @@ PR touchant les fichiers modifiés passent, ainsi que
 `verifier-etats-non-nominaux-mutation.sh` (6 sur 6). Le script central,
 35 minutes, tournera au nocturne.
 
+## Mise en production, même jour
+
+PR #708 fusionnée en rebase, `8aded97`, CI verte (16 min 20 s), image
+publiée, déployée par « Déployer en production », run 45054882572. Aucune
+migration.
+
+Contrôlé en production sans session : `/api/sante` opérationnel, les écrans
+d'administration (dont `?section=ambiance` et `?recherche=`) redirigent vers
+la connexion, et `frame-ancestors 'self'` est servi sur l'accueil, le
+catalogue et la connexion.
+
+**Non contrôlé en production** : les écrans connectés. Une session
+d'administration ne se fabrique pas sans supprimer le compte de l'exploitante
+(fiche « Session admin pour un contrôle visuel »). Le rendu a été vérifié par
+la suite de bout en bout, aux quatre largeurs ; la vérification à l'œil en
+production revient à Christophe ou à l'exploitante.
+
 ## Prochaine étape
 
-Commits, preuves par mutation de la PR, fusion, déploiement, contrôle en
-production des sept rubriques, de l'aperçu et d'une recherche.
+Contrôle à l'œil des sept rubriques, de l'aperçu d'une ambiance et d'une
+recherche, avec la session de l'exploitante. Nocturne suivant : premier
+passage du script central de mutations sur le code refondu. Puis, sur
+demande : fiche produit en formulaire unique, barre d'onglets mobile,
+recherche globale.
